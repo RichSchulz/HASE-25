@@ -1,0 +1,33 @@
+{
+  "editor.wordWrap": "on",
+  "latex-workshop.latex.outDir": "%DIR%/out",
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk",
+      "command": "latexmk",
+      "args": [
+        // "-shell-escape",
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-halt-on-error",
+        "-file-line-error",
+        "-lualatex",
+        "-outdir=%OUTDIR%",
+        "-MSWinBackSlash-",
+        "%DOC%"
+      ],
+      "env": {}
+    }
+  ],
+  "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false,
+  "ltex.language": "en-US",
+  "ltex.latex.environments": {
+    "lstlisting": "ignore",
+    "verbatim": "ignore",
+    "codeExample": "ignore"
+  },
+  "ltex.latex.commands": {
+    "\\MakeOuterQuote{}": "dummy",
+  },
+  "latex-workshop.latex.search.rootFiles.include": ["**/proposal.tex"]
+}

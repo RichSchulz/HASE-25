@@ -1,0 +1,35 @@
+\section*{Motivation \& Related Work}
+
+This study extends the findings of Kreitmeir and Raschky, "The Unintended Consequences of Censoring Digital Technology – Evidence from Italy’s ChatGPT Ban" \cite{Kreitmeir2023}.
+
+Kreitmeir and Raschky demonstrate that Italy's temporary ChatGPT ban caused a significant drop in high-level developer output, measured by project releases. However, the effect on the granular, day-to-day development process remains unquantified. It is unclear if developers wrote less code, or if the quality of their code suffered, leading to downstream effects. This research fills that gap by investigating how the sudden removal of a key AI tool impacts the fundamental activities of coding: the volume and quality of contributions.
+
+
+\section*{Methodology \& Data}
+
+The analysis will use real-time activity data for GitHub users from Italy, Austria, and France in the weeks surrounding the late March/early April 2023 ban, sourced from the public GitHub Archive.
+
+We will employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design, replicating the framework from the original paper to ensure causal inference. The analysis will compare the change in developer metrics in Italy (treatment group) against those in Austria and France (control group) before and after the ban's implementation.
+
+The key extension lies in our choice of dependent variables, moving from project releases to code-level metrics:
+
+\begin{itemize}
+  \item \textbf{Code Volume}: Net lines of code (LOC) added per user per day.
+  \item \textbf{Development Friction Proxy}: Code Churn, defined as the ratio of deleted LOC to added LOC. A higher churn rate suggests increased refactoring and more frequent self-correction.
+\end{itemize}
+
+
+\section*{Research Hypotheses}
+
+\begin{itemize}
+  \item \textbf{H1 (Volume)}: The ChatGPT ban caused a statistically significant reduction in the daily volume of code contributed by developers in the treatment group.
+  \item \textbf{H2 (Quality)}: The removal of ChatGPT increased immediate development friction, manifesting as a higher rate of in-the-moment code churn as developers engaged in more frequent self-correction and refactoring.
+\end{itemize}
+
+
+\section*{Project Outline}
+
+\begin{enumerate}
+  \item \textbf{Replication \& Validation}: First, we reproduce the main result from Kreitmeir and Raschky (2023)—the temporary 50\% drop in Release events for Italian developers.
+  \item \textbf{Extension \& Analysis}: Second, we apply the validated model to our new dependent variables (Code Volume and Code Churn) to test hypotheses H1 and H2. This will provide a more detailed understanding of how developer productivity was affected beyond just the final output.
+\end{enumerate}
