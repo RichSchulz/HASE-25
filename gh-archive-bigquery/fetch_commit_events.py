@@ -11,7 +11,6 @@ IMPORTANT DATA LIMITATIONS:
 - To get line counts, you would need to use the GitHub API or process commit URLs separately
 """
 
-import argparse
 import os
 import pandas as pd
 from datetime import datetime, timedelta
@@ -22,27 +21,6 @@ import sys
 # Load environment variables
 load_dotenv(override=True)
 
-def parse_arguments():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Fetch push events from GitHub users using GitHub Archive BigQuery"
-    )
-    parser.add_argument(
-        "csv_file",
-        help="Path to the github_users_merged CSV file"
-    )
-    parser.add_argument(
-        "--sample",
-        type=int,
-        default=None,
-        help="Number of users to sample (default: process all users)"
-    )
-    parser.add_argument(
-        "--output-dir",
-        default="./output",
-        help="Directory to save output files (default: ./output)"
-    )
-    return parser.parse_args()
 
 def read_users_csv(csv_file_path, sample_size=None):
     """
@@ -72,24 +50,28 @@ def read_users_csv(csv_file_path, sample_size=None):
 
 def create_bigquery_query(user_table_id, start_date, end_date):
     """
-    Create optimized BigQuery query to fetch individual commit events.
-    
-    This query JOINS against a user table to filter efficiently.
-    
+    Create optimized BigQuery query to fetch individual commit events
+    from the githubarchive.day dataset.
+
+    This query supports a range of days via _TABLE_SUFFIX filtering
+    and joins against a user table for efficiency.
+
     Args:
         user_table_id (str): Full ID of the BigQuery table holding usernames
                              (e.g., "my_project.my_helpers.user_list_60k")
         start_date (str): Start date in YYYY-MM-DD format
         end_date (str): End date in YYYY-MM-DD format
-        
+
     Returns:
         str: BigQuery SQL query
     """
-    
-    # This query uses the partitioned 'events' table, which is more
-    # efficient than UNION ALL over 121 'day' tables.
-    # It also JOINS against your uploaded user list instead of a giant IN clause.
-    
+
+    # Convert YYYY-MM-DD strings to YYYYMMDD for matching _TABLE_SUFFIX
+    start_suffix = start_date.replace("-", "")
+    end_suffix = end_date.replace("-", "")
+
+    print(f"start_suffix: {start_suffix}, end_suffix: {end_suffix}")
+
     query = f"""
     WITH push_events AS (
       SELECT
@@ -106,18 +88,15 @@ def create_bigquery_query(user_table_id, start_date, end_date):
         org.login AS organization_name,
         org.id AS organization_id
       FROM
-        `githubarchive.events`
-      /*
-      JOIN your user table. This is the key change!
-      Make sure your user table has a column named 'login'
-      */
+        `githubarchive.day.20*`
       INNER JOIN
-        `{user_table_id}` AS users ON actor.login = users.login
+        `{user_table_id}` AS users
+      ON actor.login = users.login
       WHERE
         type = 'PushEvent'
-        /* Filter by date. BigQuery will use this to scan only 121 partitions */
-        AND DATE(created_at) BETWEEN '{start_date}' AND '{end_date}'
+        AND _TABLE_SUFFIX BETWEEN '{start_suffix[2:]}' AND '{end_suffix[2:]}'
     ),
+
     commit_events AS (
       SELECT
         username,
@@ -135,20 +114,11 @@ def create_bigquery_query(user_table_id, start_date, end_date):
         JSON_VALUE(commit, "$.message") AS commit_message,
         JSON_VALUE(commit, "$.author.name") AS commit_author_name,
         JSON_VALUE(commit, "$.author.email") AS commit_author_email,
-        JSON_VALUE(commit, "$.committer.name") AS commit_committer_name,
-        JSON_VALUE(commit, "$.committer.email") AS commit_committer_email,
-        JSON_VALUE(commit, "$.url") AS commit_url,
-        JSON_VALUE(commit, "$.distinct") AS commit_distinct,
-        JSON_VALUE(commit, "$.added") AS files_added_list,
-        JSON_VALUE(commit, "$.removed") AS files_removed_list,
-        JSON_VALUE(commit, "$.modified") AS files_modified_list,
-        JSON_VALUE(commit, "$.timestamp") AS commit_timestamp,
-        JSON_VALUE(commit, "$.tree_id") AS tree_id,
-        JSON_VALUE(commit, "$.comment_count") AS comment_count
       FROM
         push_events,
         UNNEST(commits) AS commit
     )
+
     SELECT
       username,
       repository_name,
@@ -161,15 +131,6 @@ def create_bigquery_query(user_table_id, start_date, end_date):
       commit_message,
       commit_author_name,
       commit_author_email,
-      commit_committer_name,
-      commit_committer_email,
-      commit_url,
-      commit_timestamp,
-      tree_id,
-      comment_count,
-      files_added_list,
-      files_removed_list,
-      files_modified_list,
       push_size,
       distinct_commits,
       head_commit_sha,
@@ -179,7 +140,7 @@ def create_bigquery_query(user_table_id, start_date, end_date):
     ORDER BY
       event_timestamp DESC
     """
-    
+
     return query
 
 def fetch_commit_events(client, query):
@@ -205,13 +166,12 @@ def fetch_commit_events(client, query):
         print(f"❌ Error executing query: {e}")
         raise
 
-def save_results(commit_events_df, users_df, output_dir, csv_file_name):
+def save_results(commit_events_df, output_dir, csv_file_name):
     """
     Save commit events and user subsample to CSV files.
     
     Args:
         commit_events_df (pd.DataFrame): Commit events data
-        users_df (pd.DataFrame): Users data
         output_dir (str): Output directory
         csv_file_name (str): Original CSV file name for naming outputs
     """
@@ -221,7 +181,6 @@ def save_results(commit_events_df, users_df, output_dir, csv_file_name):
     # Generate output filenames
     base_name = os.path.splitext(os.path.basename(csv_file_name))[0]
     commit_events_file = os.path.join(output_dir, f"{base_name}_commit_events.csv")
-    users_file = os.path.join(output_dir, f"{base_name}_users_sample.csv")
     
     # Clean commit messages to prevent CSV issues
     if 'commit_message' in commit_events_df.columns:
@@ -239,26 +198,27 @@ def save_results(commit_events_df, users_df, output_dir, csv_file_name):
     commit_events_df.to_csv(commit_events_file, index=False, encoding="utf-8", quoting=1, escapechar='\\')
     print(f"✅ Saved {len(commit_events_df)} commit events to: {commit_events_file}")
     
-    # Save user subsample
-    users_df.to_csv(users_file, index=False, encoding="utf-8")
-    print(f"✅ Saved {len(users_df)} users to: {users_file}")
-    
-    return commit_events_file, users_file
+    return commit_events_file
 
 
 def main():
-    """Main function."""
-    args = parse_arguments()
+    # Define date range: 60 days before and after March 27, 2023
+    target_date = datetime(2023, 4, 1)
+    start_date = target_date - timedelta(days=60)
+    end_date = target_date + timedelta(days=60)
     
-    # ... (date setup is the same) ...
+    print(f"Fetching commit events from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    print(f"Target date: {target_date.strftime('%Y-%m-%d')}")
+    print("💡 Using chunked processing to minimize BigQuery costs")
     
     try:
-        users_df = read_users_csv(args.csv_file, args.sample)
-        # ... (check for empty users_df) ...
-        
+        COUNTRY = "france" # Change as needed
+        OUT_DIR = "output"
+        CSV_FILE = f"commits_all_{COUNTRY}.csv"
+
         # IMPORTANT: Define your BigQuery user table ID
         # Replace with your project, dataset, and table name
-        USER_TABLE_ID = "my-project-id.my_helpers.user_list_60k" 
+        USER_TABLE_ID = f"hase-25-project.users.{COUNTRY}" 
         
         print("Initializing BigQuery client...")
         client = bigquery.Client()
@@ -275,14 +235,17 @@ def main():
         commit_events_df = fetch_commit_events(client, query) 
         
         # 3. Save results (your existing function is fine)
-        save_results(
+        commit_events_file = save_results(
             commit_events_df, 
-            users_df, 
-            args.output_dir, 
-            args.csv_file
+            OUT_DIR, 
+            CSV_FILE
         )
         
-        # ... (print summary) ...
+        print("\n📊 Summary:")
+        print(f"  - Commit events found: {len(commit_events_df)}")
+        print(f"  - Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        print(f"  - Output files:")
+        print(f"    - Commit events: {commit_events_file}")
         
     except Exception as e:
         print(f"❌ Error: {e}")
