@@ -70,59 +70,53 @@ def read_users_csv(csv_file_path, sample_size=None):
     
     return df
 
-def create_bigquery_query(usernames, start_date, end_date):
+def create_bigquery_query(user_table_id, start_date, end_date):
     """
-    Create optimized BigQuery query to fetch individual commit events with detailed metrics.
+    Create optimized BigQuery query to fetch individual commit events.
+    
+    This query JOINS against a user table to filter efficiently.
     
     Args:
-        usernames (list): List of GitHub usernames
+        user_table_id (str): Full ID of the BigQuery table holding usernames
+                             (e.g., "my_project.my_helpers.user_list_60k")
         start_date (str): Start date in YYYY-MM-DD format
         end_date (str): End date in YYYY-MM-DD format
         
     Returns:
         str: BigQuery SQL query
     """
-    # Create username filter for WHERE clause
-    username_filter = "', '".join(usernames)
     
-    # Generate date range for table names
-    from datetime import datetime, timedelta
-    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-    end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-    
-    # Create UNION ALL query for each date - COMMIT EVENTS VERSION
-    table_queries = []
-    current_date = start_dt
-    while current_date <= end_dt:
-        table_suffix = current_date.strftime('%Y%m%d')
-        table_queries.append(f"""
-        SELECT
-          actor.login AS username,
-          repo.name AS repository_name,
-          repo.id AS repository_id,
-          created_at AS event_timestamp,
-          JSON_EXTRACT_ARRAY(payload, "$.commits") AS commits,
-          JSON_VALUE(payload, "$.ref") AS branch_name,
-          JSON_VALUE(payload, "$.size") AS push_size,
-          JSON_VALUE(payload, "$.distinct_size") AS distinct_commits,
-          JSON_VALUE(payload, "$.head") AS head_commit_sha,
-          JSON_VALUE(payload, "$.before") AS before_commit_sha,
-          org.login AS organization_name,
-          org.id AS organization_id
-        FROM
-          `githubarchive.day.{table_suffix}`
-        WHERE
-          type = 'PushEvent'
-          AND actor.login IN ('{username_filter}')
-        """)
-        current_date += timedelta(days=1)
-    
-    # Combine all table queries with UNION ALL
-    union_query = " UNION ALL ".join(table_queries)
+    # This query uses the partitioned 'events' table, which is more
+    # efficient than UNION ALL over 121 'day' tables.
+    # It also JOINS against your uploaded user list instead of a giant IN clause.
     
     query = f"""
     WITH push_events AS (
-      {union_query}
+      SELECT
+        actor.login AS username,
+        repo.name AS repository_name,
+        repo.id AS repository_id,
+        created_at AS event_timestamp,
+        JSON_EXTRACT_ARRAY(payload, "$.commits") AS commits,
+        JSON_VALUE(payload, "$.ref") AS branch_name,
+        JSON_VALUE(payload, "$.size") AS push_size,
+        JSON_VALUE(payload, "$.distinct_size") AS distinct_commits,
+        JSON_VALUE(payload, "$.head") AS head_commit_sha,
+        JSON_VALUE(payload, "$.before") AS before_commit_sha,
+        org.login AS organization_name,
+        org.id AS organization_id
+      FROM
+        `githubarchive.events`
+      /*
+      JOIN your user table. This is the key change!
+      Make sure your user table has a column named 'login'
+      */
+      INNER JOIN
+        `{user_table_id}` AS users ON actor.login = users.login
+      WHERE
+        type = 'PushEvent'
+        /* Filter by date. BigQuery will use this to scan only 121 partitions */
+        AND DATE(created_at) BETWEEN '{start_date}' AND '{end_date}'
     ),
     commit_events AS (
       SELECT
@@ -251,94 +245,44 @@ def save_results(commit_events_df, users_df, output_dir, csv_file_name):
     
     return commit_events_file, users_file
 
-def fetch_commit_events_chunked(client, usernames, start_date, end_date, chunk_size=50):
-    """
-    Fetch commit events in smaller chunks to minimize BigQuery costs.
-    
-    Args:
-        client: BigQuery client
-        usernames (list): List of GitHub usernames
-        start_date (str): Start date in YYYY-MM-DD format
-        end_date (str): End date in YYYY-MM-DD format
-        chunk_size (int): Number of users to process at once
-        
-    Returns:
-        pd.DataFrame: Combined results from all chunks
-    """
-    all_results = []
-    
-    # Process users in chunks
-    for i in range(0, len(usernames), chunk_size):
-        chunk_users = usernames[i:i + chunk_size]
-        print(f"Processing chunk {i//chunk_size + 1}/{(len(usernames) + chunk_size - 1)//chunk_size} ({len(chunk_users)} users)")
-        
-        query = create_bigquery_query(chunk_users, start_date, end_date)
-        chunk_df = fetch_commit_events(client, query)
-        
-        if len(chunk_df) > 0:
-            all_results.append(chunk_df)
-            print(f"  Found {len(chunk_df)} commit events in this chunk")
-        else:
-            print(f"  No commit events found in this chunk")
-    
-    if all_results:
-        return pd.concat(all_results, ignore_index=True)
-    else:
-        return pd.DataFrame()
 
 def main():
     """Main function."""
     args = parse_arguments()
     
-    # Define date range: 60 days before and after March 27, 2023
-    target_date = datetime(2023, 3, 27)
-    start_date = target_date - timedelta(days=60)
-    end_date = target_date + timedelta(days=60)
-    
-    print(f"Fetching commit events from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    print(f"Target date: {target_date.strftime('%Y-%m-%d')}")
-    print("💡 Using chunked processing to minimize BigQuery costs")
+    # ... (date setup is the same) ...
     
     try:
-        # Read users from CSV
         users_df = read_users_csv(args.csv_file, args.sample)
+        # ... (check for empty users_df) ...
         
-        if len(users_df) == 0:
-            print("❌ No users found in CSV file")
-            return
+        # IMPORTANT: Define your BigQuery user table ID
+        # Replace with your project, dataset, and table name
+        USER_TABLE_ID = "my-project-id.my_helpers.user_list_60k" 
         
-        # Extract usernames
-        usernames = users_df['login'].tolist()
-        print(f"Processing {len(usernames)} users")
-        
-        # Initialize BigQuery client
         print("Initializing BigQuery client...")
         client = bigquery.Client()
         
-        # Process in chunks to minimize costs
-        commit_events_df = fetch_commit_events_chunked(
-            client, 
-            usernames, 
-            start_date.strftime('%Y-%m-%d'), 
-            end_date.strftime('%Y-%m-%d'),
-            chunk_size=50  # Process 50 users at a time for larger samples
+        # 1. Create the single, efficient query
+        query = create_bigquery_query(
+            USER_TABLE_ID,
+            start_date.strftime('%Y-%m-%d'),
+            end_date.strftime('%Y-%m-%d')
         )
         
-        # Save results
-        commit_events_file, users_file = save_results(
+        # 2. Run the single query
+        # This will scan the data ONCE. Cost will be ~$25-30.
+        commit_events_df = fetch_commit_events(client, query) 
+        
+        # 3. Save results (your existing function is fine)
+        save_results(
             commit_events_df, 
             users_df, 
             args.output_dir, 
             args.csv_file
         )
         
-        print("\n📊 Summary:")
-        print(f"  - Users processed: {len(users_df)}")
-        print(f"  - Commit events found: {len(commit_events_df)}")
-        print(f"  - Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-        print(f"  - Output files:")
-        print(f"    - Commit events: {commit_events_file}")
-        print(f"    - Users sample: {users_file}")
+        # ... (print summary) ...
         
     except Exception as e:
         print(f"❌ Error: {e}")
