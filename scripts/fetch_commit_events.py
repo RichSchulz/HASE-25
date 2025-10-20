@@ -120,11 +120,26 @@ def save_results(commit_events_df: pd.DataFrame, output_dir: str, csv_file_name:
     return commit_events_file
 
 
+def confirm_action(prompt: str):
+    while True:
+        answer = input(f"{prompt} (y/N)").strip().lower()
+        if answer in ("n", ""):
+            return False
+        elif answer == "y":
+            return True
+        else:
+            print("Please enter 'y' or 'n' (default is 'N').")
+
+
 def main():
+    if not confirm_action("💰💰💰 This query is expensive and might override existing data. Do you want to continue?"):
+        print("👋 bye")
+        return
+
     # Define date range: 60 days before and after March 27, 2023
     target_date = datetime(2023, 4, 1)
-    start_date = target_date - timedelta(days=1)
-    end_date = target_date + timedelta(days=1)
+    start_date = target_date - timedelta(days=60)
+    end_date = target_date + timedelta(days=60)
     
     print(f"Fetching commit events from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     print(f"Target date: {target_date.strftime('%Y-%m-%d')}")
@@ -133,7 +148,7 @@ def main():
     try:
         country = "france" # Change as needed
         out_dir = "large_data"
-        csv_file = f"commits_all_{country}.csv"
+        csv_file = f"new__commits_all_{country}.csv"
 
         user_table_id = f"hase-25-project.users.{country}" 
         

@@ -1,0 +1,135 @@
+import os
+import pandas as pd
+from datetime import datetime, timedelta
+from google.cloud import bigquery
+from dotenv import load_dotenv
+import sys
+
+
+def create_bigquery_query(user_table_id: str, start_date: str, end_date: str) -> str:
+    # Convert YYYY-MM-DD strings to YYYYMMDD for matching _TABLE_SUFFIX
+    start_suffix = start_date.replace("-", "")
+    end_suffix = end_date.replace("-", "")
+
+    query = f"""
+    WITH release_events AS (
+        SELECT
+            actor.login AS username,
+            repo.name AS repository_name,
+            repo.id AS repository_id,
+            created_at AS event_timestamp,
+            JSON_VALUE(payload, "$.release.id") AS release_id,
+            org.login AS organization_name,
+            org.id AS organization_id
+        FROM
+            `githubarchive.day.20*`
+        INNER JOIN
+            `{user_table_id}` AS users
+        ON actor.login = users.login
+        WHERE
+            type = 'ReleaseEvent'
+            AND _TABLE_SUFFIX BETWEEN '{start_suffix[2:]}' AND '{end_suffix[2:]}'
+    )
+
+    SELECT
+        username,
+        repository_name,
+        repository_id,
+        event_timestamp,
+        release_id,
+        organization_name,
+        organization_id
+    FROM
+        release_events
+    ORDER BY
+        event_timestamp DESC
+    """
+
+    return query
+
+
+def fetch_release_events(client: bigquery.Client, query: str) -> pd.DataFrame:
+    print("Executing BigQuery query...")
+    print("This may take several minutes depending on the data size...")
+    
+    try:
+        query_job = client.query(query)
+        df = query_job.to_dataframe()
+        print(f"✅ Retrieved {len(df)} release events")
+        return df
+    except Exception as e:
+        print(f"❌ Error executing query: {e}")
+        raise
+
+
+def save_results(release_events_df: pd.DataFrame, output_dir: str, csv_file_name: str) -> str:
+    os.makedirs(output_dir, exist_ok=True)
+    output_csv_file = os.path.join(output_dir, csv_file_name)
+    
+    release_events_df.to_csv(output_csv_file, index=False, encoding="utf-8", quoting=1, escapechar='\\')
+    print(f"✅ Saved {len(release_events_df)} release events to: {output_csv_file}")
+    
+    return output_csv_file
+
+
+def confirm_action(prompt: str):
+    while True:
+        answer = input(f"{prompt} (y/N)").strip().lower()
+        if answer in ("n", ""):
+            return False
+        elif answer == "y":
+            return True
+        else:
+            print("Please enter 'y' or 'n' (default is 'N').")
+
+def main():
+    if not confirm_action("💰💰💰 This query is expensive and might override existing data. Do you want to continue?"):
+        print("👋 bye")
+        return
+
+    target_date = datetime(2023, 4, 1)
+    start_date = target_date - timedelta(days=60)
+    end_date = target_date + timedelta(days=60)
+
+    print(f"Fetching release events from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    print(f"Target date: {target_date.strftime('%Y-%m-%d')}")
+    print("💡 Using chunked processing to minimize BigQuery costs")
+    
+    try:
+        country = "france" # Change as needed
+        out_dir = "data"
+        csv_file = f"new__release_all_{country}.csv"
+
+        user_table_id = f"hase-25-project.users.{country}" 
+        
+        print("Initializing BigQuery client...")
+        client = bigquery.Client()
+        
+        query = create_bigquery_query(
+            user_table_id,
+            start_date.strftime('%Y-%m-%d'),
+            end_date.strftime('%Y-%m-%d')
+        )
+        
+        release_events_df = fetch_release_events(client, query) 
+        
+        release_events_file = save_results(
+            release_events_df, 
+            out_dir, 
+            csv_file
+        )
+        
+        print("\n📊 Summary:")
+        print(f"  - Release events found: {len(release_events_df)}")
+        print(f"  - Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        print(f"  - Output files:")
+        print(f"  - Release events: {release_events_file}")
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    load_dotenv(override=True)
+    main()
