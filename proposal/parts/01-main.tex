@@ -1,29 +1,33 @@
 \section*{Motivation \& Related Work}
 
-This study extends the findings of Kreitmeir and Raschky, "The Unintended Consequences of Censoring Digital Technology – Evidence from Italy’s ChatGPT Ban" \cite{Kreitmeir2023}.
+There has been substantial anecdotal evidence suggesting that AI-assisted coding tools such as ChatGPT and GitHub Copilot have significantly increased developer productivity. However, recent empirical research has shown mixed results\cite{cui2025the, paradis2024doesaiimpactdevelopment, peng2023impactaideveloperproductivity}. While some studies find notable efficiency gains from integrating generative AI into software development workflows—for instance, faster code completion and reduced debugging time—other work points to limited or highly context-dependent effects, with improvements varying by task complexity, developer experience, and integration depth.
 
-Kreitmeir and Raschky demonstrate that Italy's temporary ChatGPT ban caused a significant drop in high-level developer output, measured by project releases. However, the effect on the granular, day-to-day development process remains unquantified. It is unclear if developers wrote less code, or if the quality of their code suffered, leading to downstream effects. This research fills that gap by investigating how the sudden removal of a key AI tool impacts the fundamental activities of coding: the volume and quality of contributions.
+Despite this growing literature, much of the existing evidence is correlational or based on controlled experiments detached from real-world settings. We still know little about how sudden changes in access to such tools affect developers in practice. In particular, the short-lived ChatGPT ban in Italy in early 2023 offers a rare quasi-experimental opportunity to observe developers’ behavioral response to an abrupt disruption in access to a key AI tool.
+
+Building on Kreitmeir and Raschky (2023)\cite{Kreitmeir2023}, who documented a 50\% decline in Italian project releases during the ban, this research moves one step closer to identifying how this productivity loss materialized. However, the effect on the granular, day-to-day development process remains unquantified. It is unclear if developers wrote less code, or if the quality of their code suffered, leading to downstream effects. This research fills that gap by investigating how the sudden removal of a key AI tool impacts the fundamental activities of coding: the volume and quality of contributions.
 
 
 \section*{Methodology \& Data}
 
-The analysis will use real-time activity data for GitHub users from Italy, Austria, and France in the weeks surrounding the late March/early April 2023 ban, sourced from the public GitHub Archive.
+The analysis will use historical activity data for GitHub users from Italy, Austria, and France in the weeks surrounding the late March/early April 2023 ban, sourced from the public GitHub Archive.
 
 We will employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design, replicating the framework from the original paper to ensure causal inference. The analysis will compare the change in developer metrics in Italy (treatment group) against those in Austria and France (control group) before and after the ban's implementation.
 
-The key extension lies in our choice of dependent variables, moving from project releases to code-level metrics:
+In contrast to the original study—which measured aggregate productivity through project releases—our analysis zooms in on code-level and issue-level metrics that capture the day-to-day development process. The main dependent variables are:
 
 \begin{itemize}
-  \item \textbf{Code Volume}: Net lines of code (LOC) added per user per day.
-  \item \textbf{Development Friction Proxy}: Code Churn, defined as the ratio of deleted LOC to added LOC. A higher churn rate suggests increased refactoring and more frequent self-correction.
+  \item \textbf{Code Volume}: The number of lines of code (LOC) added and deleted per developer per day. This provides a granular measure of active coding behavior.
+  \item \textbf{Bug-Related Issue Creation}: As an indirect quality proxy, we analyze whether the number of bug-related issues (identified through issue titles and labels containing keywords such as “bug,” “fix,” or “error”) increased in the weeks following the ban within affected repositories.
 \end{itemize}
+
+All variables will be standardized at the developer-day level to account for individual differences in coding activity. Control variables will include developer experience (tenure on GitHub), project size, and temporal trends (day-of-week effects).
 
 
 \section*{Research Hypotheses}
 
 \begin{itemize}
-  \item \textbf{H1 (Volume)}: The ChatGPT ban caused a statistically significant reduction in the daily volume of code contributed by developers in the treatment group.
-  \item \textbf{H2 (Quality)}: The removal of ChatGPT increased immediate development friction, manifesting as a higher rate of in-the-moment code churn as developers engaged in more frequent self-correction and refactoring.
+  \item \textbf{H1 (Volume)}: The ChatGPT ban caused a statistically significant reduction in the daily volume of code contributed by developers in the treatment group, measured through lines of code added and deleted per user per day.
+  \item \textbf{H2 (Defect Incidence)}: Projects affected by the ban experienced an increase in bug-related issue creation in the subsequent weeks compared to the control group, indicating that the temporary loss of ChatGPT led to a higher defect rate or more post-release debugging effort.
 \end{itemize}
 
 
@@ -31,5 +35,5 @@ The key extension lies in our choice of dependent variables, moving from project
 
 \begin{enumerate}
   \item \textbf{Replication \& Validation}: First, we reproduce the main result from Kreitmeir and Raschky (2023)—the temporary 50\% drop in Release events for Italian developers.
-  \item \textbf{Extension \& Analysis}: Second, we apply the validated model to our new dependent variables (Code Volume and Code Churn) to test hypotheses H1 and H2. This will provide a more detailed understanding of how developer productivity was affected beyond just the final output.
+  \item \textbf{Extension \& Analysis}: Second, we apply the validated model to our new dependent variables ( Volume and Defect Incidence) to test hypotheses H1 and H2. Together, these analyses will offer a richer understanding of how generative AI tools influence developer productivity — not only in terms of total output but also in terms of the quality of the produced code.
 \end{enumerate}
