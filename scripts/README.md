@@ -21,20 +21,6 @@ This analysis examines whether Italy's temporary ban on ChatGPT (April 1-28, 202
 
 The analysis focuses on the **active subset** of developers who had commits during the period, which is actually more meaningful for understanding development activity patterns.
 
-## Data Collection
-
-Before running the analysis, collect the data using the updated script:
-
-```bash
-# Collect data for Italy (1000 users)
-python ../gh-archive-bigquery/fetch_commit_events.py ../github_scrape/data/github_users_merged_italy.csv --sample 1000
-
-# Collect data for Austria (1000 users)
-python ../gh-archive-bigquery/fetch_commit_events.py ../github_scrape/data/github_users_merged_austria.csv --sample 1000
-
-# Collect data for France (1000 users)
-python ../gh-archive-bigquery/fetch_commit_events.py ../github_scrape/data/github_users_merged_france.csv --sample 1000
-```
 
 ## Analysis
 
@@ -81,4 +67,4 @@ The analysis will produce:
 - Python 3.8+
 - pandas, numpy, matplotlib, seaborn, scipy
 - Jupyter notebook
-- Data files from `../gh-archive-bigquery/output/`
+- Data files from `data/` and `large_data`

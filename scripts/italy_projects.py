@@ -1,25 +1,9 @@
-#!/usr/bin/env python3
-"""
-Create a project-level summary for Italy during the ChatGPT ban window.
-
-Reads a commits CSV (as produced by fetch_commit_events.py), filters to the
-ban period (inclusive): 2023-04-01 to 2023-04-07, and aggregates per
-repository:
-  - repository_name
-  - repository_id
-  - num_commits_during_ban
-  - num_unique_users_during_ban
-
-Outputs the result sorted by num_unique_users_during_ban (desc), then
-num_commits_during_ban (desc) into italy_projects.csv.
-"""
-
 import os
 import sys
 import pandas as pd
 
-INPUT_PATH = "/Users/richard/University/HASE-25/gh-archive-bigquery/output/commits_all_italy_commit_events.csv"
-OUTPUT_PATH = "/Users/richard/University/HASE-25/gh-archive-bigquery/output/italy_projects.csv"
+INPUT_PATH = "large_data/commits_all_italy.csv"
+OUTPUT_PATH = "data/italy_projects.csv"
 
 
 def main():
@@ -91,5 +75,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

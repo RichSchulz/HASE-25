@@ -8,9 +8,9 @@ window_length = 7  # <-- SET YOUR WINDOW LENGTH (in days) HERE
 
 # --- 1. Load Data (Same as before) ---
 try:
-    italy_commits = pd.read_csv('../gh-archive-bigquery/output/commits_all_italy_commit_events.csv', parse_dates=['event_timestamp'])
-    austria_commits = pd.read_csv('../gh-archive-bigquery/output/commits_all_austria_commit_events.csv', parse_dates=['event_timestamp'])
-    france_commits = pd.read_csv('../gh-archive-bigquery/output/commits_all_france_commit_events.csv', parse_dates=['event_timestamp'])
+    italy_commits = pd.read_csv('large_data/commits_all_italy.csv', parse_dates=['event_timestamp'])
+    austria_commits = pd.read_csv('large_data/commits_all_austria.csv', parse_dates=['event_timestamp'])
+    france_commits = pd.read_csv('large_data/commits_all_france.csv', parse_dates=['event_timestamp'])
 except FileNotFoundError as e:
     print(f"Error: {e}\nStop.")
     exit()
