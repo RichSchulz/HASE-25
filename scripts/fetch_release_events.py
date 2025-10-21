@@ -83,6 +83,8 @@ def confirm_action(prompt: str):
             print("Please enter 'y' or 'n' (default is 'N').")
 
 def main():
+    load_dotenv(override=True)
+
     if not confirm_action("💰💰💰 This query is expensive and might override existing data. Do you want to continue?"):
         print("👋 bye")
         return
@@ -131,5 +133,4 @@ def main():
 
 
 if __name__ == "__main__":
-    load_dotenv(override=True)
     main()

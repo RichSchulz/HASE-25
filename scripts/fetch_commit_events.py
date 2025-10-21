@@ -102,6 +102,7 @@ def save_results(commit_events_df: pd.DataFrame, output_dir: str, csv_file_name:
     commit_events_file = os.path.join(output_dir, csv_file_name)
     
     # Clean commit messages to prevent CSV issues
+    # TODO: Should we really do this? I think it would not be necessary
     if 'commit_message' in commit_events_df.columns:
         commit_events_df = commit_events_df.copy()
         commit_events_df['commit_message'] = commit_events_df['commit_message'].fillna('').astype(str)
@@ -132,6 +133,8 @@ def confirm_action(prompt: str):
 
 
 def main():
+    load_dotenv(override=True)
+
     if not confirm_action("💰💰💰 This query is expensive and might override existing data. Do you want to continue?"):
         print("👋 bye")
         return
@@ -181,5 +184,4 @@ def main():
 
 
 if __name__ == "__main__":
-    load_dotenv(override=True)
     main()
