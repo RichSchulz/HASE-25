@@ -1,0 +1,97 @@
+{
+  "sha": "a0c468248391a114c679fbb4f49fcb090dbd0200",
+  "node_id": "C_kwDOGIjGn9oAKGEwYzQ2ODI0ODM5MWExMTRjNjc5ZmJiNGY0OWZjYjA5MGRiZDAyMDA",
+  "commit": {
+    "author": {
+      "name": "Manuel Coppotelli",
+      "email": "manuel.coppotelli@pagopa.it",
+      "date": "2023-05-31T11:46:53Z"
+    },
+    "committer": {
+      "name": "GitHub",
+      "email": "noreply@github.com",
+      "date": "2023-05-31T11:46:53Z"
+    },
+    "message": "feat(sign): [SFEQS-1627] Monitoring alarms on dedicated channel (#577)",
+    "tree": {
+      "sha": "b1aa5e757cbe62d6bdf1db906fc90dc43e6468fa",
+      "url": "https://api.github.com/repos/pagopa/io-infra/git/trees/b1aa5e757cbe62d6bdf1db906fc90dc43e6468fa"
+    },
+    "url": "https://api.github.com/repos/pagopa/io-infra/git/commits/a0c468248391a114c679fbb4f49fcb090dbd0200",
+    "comment_count": 0,
+    "verification": {
+      "verified": true,
+      "reason": "valid",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsBcBAABCAAQBQJkdzOtCRBK7hj4Ov3rIwAAzzUIABV3zt9k17L99AhWSSizlXOy\naF6Slkki2o3r8wE3xjYy+WXaB+ajbj+1NDQ1AGPNDmSslx9rm+Fo0yDRjkxNll5S\n0UH7scioXtzNAlEtjOdwvaRS2fSfr1NxMGbyDOniOUrRHUC0IdliwHhv1c8LU0Mq\nvxKPDEOrfG7Ol3IOsQ+JL8UHO2ffG5Ebell8cq86nGlI1dPB36//wlvOCfDIe4ls\nXc2GqYitcuAJ2HWNca8hqZFxXUeCjwIz1TBG1rZR1r4XVN35sHEIvPzj9iAWl0fE\n/iJDJ5F1SIytACaTPFKcrcsMd19zwuAh9EVkx5GPlJzBAS3om3L6La7VlcrluAo=\n=QQYA\n-----END PGP SIGNATURE-----\n",
+      "payload": "tree b1aa5e757cbe62d6bdf1db906fc90dc43e6468fa\nparent cc93cebcb6ce535302cf383accd80b7339aec240\nauthor Manuel Coppotelli <manuel.coppotelli@pagopa.it> 1685533613 +0200\ncommitter GitHub <noreply@github.com> 1685533613 +0200\n\nfeat(sign): [SFEQS-1627] Monitoring alarms on dedicated channel (#577)\n\n",
+      "verified_at": "2024-01-16T19:59:59Z"
+    }
+  },
+  "url": "https://api.github.com/repos/pagopa/io-infra/commits/a0c468248391a114c679fbb4f49fcb090dbd0200",
+  "html_url": "https://github.com/pagopa/io-infra/commit/a0c468248391a114c679fbb4f49fcb090dbd0200",
+  "comments_url": "https://api.github.com/repos/pagopa/io-infra/commits/a0c468248391a114c679fbb4f49fcb090dbd0200/comments",
+  "author": {
+    "login": "manuelcoppotelli",
+    "id": 3383108,
+    "node_id": "MDQ6VXNlcjMzODMxMDg=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/3383108?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/manuelcoppotelli",
+    "html_url": "https://github.com/manuelcoppotelli",
+    "followers_url": "https://api.github.com/users/manuelcoppotelli/followers",
+    "following_url": "https://api.github.com/users/manuelcoppotelli/following{/other_user}",
+    "gists_url": "https://api.github.com/users/manuelcoppotelli/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/manuelcoppotelli/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/manuelcoppotelli/subscriptions",
+    "organizations_url": "https://api.github.com/users/manuelcoppotelli/orgs",
+    "repos_url": "https://api.github.com/users/manuelcoppotelli/repos",
+    "events_url": "https://api.github.com/users/manuelcoppotelli/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/manuelcoppotelli/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "committer": {
+    "login": "web-flow",
+    "id": 19864447,
+    "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/web-flow",
+    "html_url": "https://github.com/web-flow",
+    "followers_url": "https://api.github.com/users/web-flow/followers",
+    "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+    "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+    "organizations_url": "https://api.github.com/users/web-flow/orgs",
+    "repos_url": "https://api.github.com/users/web-flow/repos",
+    "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/web-flow/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "parents": [
+    {
+      "sha": "cc93cebcb6ce535302cf383accd80b7339aec240",
+      "url": "https://api.github.com/repos/pagopa/io-infra/commits/cc93cebcb6ce535302cf383accd80b7339aec240",
+      "html_url": "https://github.com/pagopa/io-infra/commit/cc93cebcb6ce535302cf383accd80b7339aec240"
+    }
+  ],
+  "stats": { "total": 88, "additions": 87, "deletions": 1 },
+  "files": [
+    {
+      "sha": "e78f60f18f1b7665cb9c992cbe2e653056a131bb",
+      "filename": "src/domains/sign/monitoring.tf",
+      "status": "modified",
+      "additions": 87,
+      "deletions": 1,
+      "changes": 88,
+      "blob_url": "https://github.com/pagopa/io-infra/blob/a0c468248391a114c679fbb4f49fcb090dbd0200/src%2Fdomains%2Fsign%2Fmonitoring.tf",
+      "raw_url": "https://github.com/pagopa/io-infra/raw/a0c468248391a114c679fbb4f49fcb090dbd0200/src%2Fdomains%2Fsign%2Fmonitoring.tf",
+      "contents_url": "https://api.github.com/repos/pagopa/io-infra/contents/src%2Fdomains%2Fsign%2Fmonitoring.tf?ref=a0c468248391a114c679fbb4f49fcb090dbd0200",
+      "patch": "@@ -3,6 +3,16 @@ data \"azurerm_application_insights\" \"application_insights\" {\n   resource_group_name = \"io-p-rg-common\"\n }\n \n+data \"azurerm_key_vault_secret\" \"monitor_fci_tech_email\" {\n+  name         = \"monitor-fci-tech-email\"\n+  key_vault_id = module.key_vault.id\n+}\n+\n+data \"azurerm_key_vault_secret\" \"monitor_fci_tech_slack_email\" {\n+  name         = \"monitor-fci-tech-slack\"\n+  key_vault_id = module.key_vault.id\n+}\n+\n data \"azurerm_monitor_action_group\" \"slack\" {\n   resource_group_name = \"io-p-rg-common\"\n   name                = \"SlackPagoPA\"\n@@ -13,6 +23,34 @@ data \"azurerm_monitor_action_group\" \"email\" {\n   name                = \"EmailPagoPA\"\n }\n \n+resource \"azurerm_monitor_action_group\" \"email_fci_tech\" {\n+  name                = \"EmailFirmaConIoTech\"\n+  resource_group_name = azurerm_resource_group.integration_rg.name\n+  short_name          = \"EmailFCITech\"\n+\n+  email_receiver {\n+    name                    = \"sendtooperations\"\n+    email_address           = data.azurerm_key_vault_secret.monitor_fci_tech_email.value\n+    use_common_alert_schema = true\n+  }\n+\n+  tags = var.tags\n+}\n+\n+resource \"azurerm_monitor_action_group\" \"slack_fci_tech\" {\n+  name                = \"SlackFirmaConIoTech\"\n+  resource_group_name = azurerm_resource_group.integration_rg.name\n+  short_name          = \"SlackFCITech\"\n+\n+  email_receiver {\n+    name                    = \"sendtoslack\"\n+    email_address           = data.azurerm_key_vault_secret.monitor_fci_tech_slack_email.value\n+    use_common_alert_schema = true\n+  }\n+\n+  tags = var.tags\n+}\n+\n # issuer\n resource \"azurerm_monitor_metric_alert\" \"io_sign_issuer_http_server_errors\" {\n   name                = format(\"%s-http-server-errors\", module.io_sign_issuer_func.name)\n@@ -38,6 +76,14 @@ resource \"azurerm_monitor_metric_alert\" \"io_sign_issuer_http_server_errors\" {\n   action {\n     action_group_id = data.azurerm_monitor_action_group.slack.id\n   }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.email_fci_tech.id\n+  }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.slack_fci_tech.id\n+  }\n }\n \n resource \"azurerm_monitor_metric_alert\" \"io_sign_issuer_response_time\" {\n@@ -64,6 +110,14 @@ resource \"azurerm_monitor_metric_alert\" \"io_sign_issuer_response_time\" {\n   action {\n     action_group_id = data.azurerm_monitor_action_group.slack.id\n   }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.email_fci_tech.id\n+  }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.slack_fci_tech.id\n+  }\n }\n \n # user\n@@ -91,6 +145,14 @@ resource \"azurerm_monitor_metric_alert\" \"io_sign_user_http_server_errors\" {\n   action {\n     action_group_id = data.azurerm_monitor_action_group.slack.id\n   }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.email_fci_tech.id\n+  }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.slack_fci_tech.id\n+  }\n }\n \n resource \"azurerm_monitor_metric_alert\" \"io_sign_user_response_time\" {\n@@ -117,6 +179,14 @@ resource \"azurerm_monitor_metric_alert\" \"io_sign_user_response_time\" {\n   action {\n     action_group_id = data.azurerm_monitor_action_group.slack.id\n   }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.email_fci_tech.id\n+  }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.slack_fci_tech.id\n+  }\n }\n \n # support\n@@ -144,6 +214,14 @@ resource \"azurerm_monitor_metric_alert\" \"io_sign_support_http_server_errors\" {\n   action {\n     action_group_id = data.azurerm_monitor_action_group.slack.id\n   }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.email_fci_tech.id\n+  }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.slack_fci_tech.id\n+  }\n }\n \n resource \"azurerm_monitor_metric_alert\" \"io_sign_support_response_time\" {\n@@ -170,4 +248,12 @@ resource \"azurerm_monitor_metric_alert\" \"io_sign_support_response_time\" {\n   action {\n     action_group_id = data.azurerm_monitor_action_group.slack.id\n   }\n-}\n\\ No newline at end of file\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.email_fci_tech.id\n+  }\n+\n+  action {\n+    action_group_id = azurerm_monitor_action_group.slack_fci_tech.id\n+  }\n+}"
+    }
+  ]
+}

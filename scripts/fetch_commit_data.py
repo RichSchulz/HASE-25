@@ -223,15 +223,22 @@ def fetch_commits_and_update_csv(
 def main():
     load_dotenv(override=True)
 
-    top_projects = [get_top_repository_name(i, "data/italy_projects_fulltime.csv") for i in range(10)]
+    # top_projects = [get_top_repository_name(i, "data/italy_projects_fulltime.csv") for i in range(10)]
 
-    for project in top_projects:
-        fetch_commits_and_update_csv(
-            repository_name=project,
-            commits_csv="large_data/commits_all_italy.csv",
-            output_dir="large_data",
-            # commits_limit=5 # set this for testing
-        )
+    # for project in top_projects:
+    #     fetch_commits_and_update_csv(
+    #         repository_name=project,
+    #         commits_csv="large_data/commits_all_italy.csv",
+    #         output_dir="large_data",
+    #         # commits_limit=5 # set this for testing
+    #     )
+
+    fetch_commits_and_update_csv(
+        repository_name="pagopa/io-app",
+        commits_csv="large_data/commits_all_italy.csv",
+        output_dir="large_data",
+        # commits_limit=5 # set this for testing
+    )
 
 
 if __name__ == "__main__":
