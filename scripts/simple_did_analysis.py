@@ -33,25 +33,12 @@ def load_and_prepare_data():
     
     return combined_df
 
-def prepare_did_variables(df):
+def prepare_did_variables(df, seven_days_only=False):
     """Prepare variables for difference-in-differences analysis"""
     print("Preparing DiD variables...")
     
     # Convert event_timestamp to datetime
     df['event_timestamp'] = pd.to_datetime(df['event_timestamp'])
-    
-    # Create treatment group indicator (Italy = 1, others = 0)
-    df['treatment'] = (df['country'] == 'italy').astype(int)
-    
-    # Create post-treatment indicator (after April 1st, 2023 = 1, before = 0)
-    april_1st = pd.Timestamp('2023-04-01', tz='UTC')
-    df['post_treatment'] = (df['event_timestamp'] >= april_1st).astype(int)
-    
-    # Create interaction term (treatment * post_treatment)
-    df['treatment_post'] = df['treatment'] * df['post_treatment']
-    
-    # Add day of week controls
-    df['day_of_week'] = df['event_timestamp'].dt.day_name()
     
     # Handle missing API data
     df['api_additions'] = pd.to_numeric(df['api_additions'], errors='coerce')
@@ -65,17 +52,56 @@ def prepare_did_variables(df):
     print(f"Removed {initial_count - final_count} commits with missing API data")
     print(f"Final dataset: {final_count} commits")
     
-    # Create log variables
-    df['log_additions'] = np.log1p(df['api_additions'])
-    df['log_deletions'] = np.log1p(df['api_deletions'])
-    df['log_changes'] = np.log1p(df['api_changes'])
+    # Create date column (without time)
+    df['date'] = df['event_timestamp'].dt.date
     
-    return df
+    # Filter by time period if seven_days_only is True
+    if seven_days_only:
+        april_1st = pd.Timestamp('2023-04-01').date()
+        april_8th = pd.Timestamp('2023-04-08').date()
+        # Keep both before and after periods, but limit after to 7 days
+        df = df[(df['date'] < april_8th)]  # Keep all data before April 8th
+        print(f"Filtered to 7 days after April 1st: {len(df)} commits")
+    
+    # Aggregate by user and date
+    print("Aggregating commits by user and date...")
+    daily_user_stats = df.groupby(['username', 'country', 'date']).agg({
+        'api_additions': 'sum',
+        'api_deletions': 'sum', 
+        'api_changes': 'sum',
+        'commit_sha': 'count'  # Number of commits per user per day
+    }).reset_index()
+    
+    daily_user_stats.rename(columns={'commit_sha': 'commits_count'}, inplace=True)
+    
+    print(f"Aggregated to {len(daily_user_stats)} user-day observations")
+    
+    # Create treatment group indicator (Italy = 1, others = 0)
+    daily_user_stats['treatment'] = (daily_user_stats['country'] == 'italy').astype(int)
+    
+    # Create post-treatment indicator (after April 1st, 2023 = 1, before = 0)
+    april_1st = pd.Timestamp('2023-04-01').date()
+    daily_user_stats['post_treatment'] = (daily_user_stats['date'] >= april_1st).astype(int)
+    
+    # Create interaction term (treatment * post_treatment)
+    daily_user_stats['treatment_post'] = daily_user_stats['treatment'] * daily_user_stats['post_treatment']
+    
+    # Add day of week controls
+    daily_user_stats['date_dt'] = pd.to_datetime(daily_user_stats['date'])
+    daily_user_stats['day_of_week'] = daily_user_stats['date_dt'].dt.day_name()
+    
+    # Create log variables
+    daily_user_stats['log_additions'] = np.log1p(daily_user_stats['api_additions'])
+    daily_user_stats['log_deletions'] = np.log1p(daily_user_stats['api_deletions'])
+    daily_user_stats['log_changes'] = np.log1p(daily_user_stats['api_changes'])
+    
+    return daily_user_stats
 
 def difference_in_differences_analysis(df):
     """Perform difference-in-differences regression analysis"""
     print("\n" + "="*80)
     print("DIFFERENCE-IN-DIFFERENCES REGRESSION ANALYSIS")
+    print("(Analyzing total lines per user per day)")
     print("="*80)
     
     # Define log outcome variables
@@ -116,10 +142,18 @@ def difference_in_differences_analysis(df):
         print(f"P-value for DiD effect: {p_val:.4f}")
 
 def main():
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Simplified DiD Analysis of Commit Activity")
+    parser.add_argument("--seven-days-only", action="store_true",
+                       help="Analyze only 7 days after April 1st instead of 14 days")
+    
+    args = parser.parse_args()
+    
     try:
         # Load and prepare data
         df = load_and_prepare_data()
-        df = prepare_did_variables(df)
+        df = prepare_did_variables(df, seven_days_only=args.seven_days_only)
         
         # Perform DiD analysis
         difference_in_differences_analysis(df)
