@@ -4,14 +4,14 @@ There has been substantial anecdotal evidence suggesting that AI-assisted coding
 
 Despite this growing literature, much of the existing evidence is correlational or based on controlled experiments detached from real-world settings. We still know little about how sudden changes in access to such tools affect developers in practice. In particular, the short-lived ChatGPT ban in Italy in early 2023 \cite{garante_ban_2023} offers a rare quasi-experimental opportunity to observe developers’ behavioral response to an abrupt disruption in access to a key AI tool.
 
-Building on Kreitmeir and Raschky (2023)\cite{Kreitmeir2023}, who documented a 50\% decline in Italian project releases during the ban, this research moves one step closer to identifying how this productivity loss materialized. However, the effect on the granular, day-to-day development process remains unquantified. It is unclear if developers wrote less code, or if the quality of their code suffered, leading to downstream effects. This is a critical question, as several studies now link AI assistance to negative quality outcomes, such an increased likelihood of introducing security vulnerabilities \cite{fu2025securityweaknessescopilotgeneratedcode, pearce2021asleepkeyboardassessingsecurity}. This research fills that gap by investigating how the sudden removal of a key AI tool impacts the fundamental activities of coding: the volume and quality of contributions.
+Building on Kreitmeir and Raschky \cite{Kreitmeir2023}, who documented a 50\% decline of release events in Italian open source projects during the ban, this research moves one step closer to identifying how this productivity loss materialized. However, the effect on the granular, day-to-day development process remains unquantified. It is unclear if developers wrote less code, or if the quality of their code suffered, leading to downstream effects. This is a critical question, as several studies now link AI assistance to negative quality outcomes, such an increased likelihood of introducing security vulnerabilities \cite{fu2025securityweaknessescopilotgeneratedcode, pearce2021asleepkeyboardassessingsecurity}. This research fills that gap by investigating how the sudden removal of a key AI tool impacts the fundamental activities of coding: the volume and quality of contributions.
 
 
 \section*{Methodology \& Data}
 
-The analysis will use historical activity data for GitHub users from Italy, Austria, and France in the weeks surrounding the late March/early April 2023 ban, sourced from the public GitHub Archive.
+The analysis will use historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the late March/early April 2023 ban. To this end, we will leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Because GH Archive data does not include information about developers’ locations, we will infer user countries based on their public profile information, following the methods from prior research \cite{Kreitmeir2023}.
 
-We will employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design, replicating the framework from the original paper to ensure causal inference. The analysis will compare the change in developer metrics in Italy (treatment group) against those in Austria and France (control group) before and after the ban's implementation.
+We will employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design to ensure causal inference, replicating the framework from the original paper. The analysis will compare the change in developer metrics in Italy (treatment group) against those in Austria and France (control group). We will collect and analyze data from before, during, and after then ban period.
 
 In contrast to the original study—which measured aggregate productivity through project releases—our analysis zooms in on code-level and issue-level metrics that capture the day-to-day development process. The main dependent variables are:
 
@@ -33,8 +33,10 @@ All variables will be standardized at the developer-day level to account for ind
 
 \section*{Project Outline}
 
+
+
 \begin{enumerate}
-  \item \textbf{Data Collection \& Preparation}: First, we will gather and preprocess the GitHub activity data for developers in Italy, Austria, and France around the ban period from the GitHub Archive \cite{github_archive}. Additionally, we need to extract relevant metrics such as lines of code added/deleted and issue creation details directly from the Github REST API \cite{github_api}.
-  \item \textbf{Replication \& Validation}: Then, we reproduce the main result from Kreitmeir and Raschky (2023)—the temporary 50\% drop in Release events for Italian developers.
-  \item \textbf{Extension \& Analysis}: Finally, we apply the validated model to our new dependent variables ( Volume and Defect Incidence) to test hypotheses H1 and H2. Together, these analyses will offer a richer understanding of how generative AI tools influence developer productivity — not only in terms of total output but also in terms of the quality of the produced code.
+  \item \textbf{Data Collection \& Preparation}: First, we gather data about developers from Italy, Austria, and France for the weeks around the ban period in early April 2023 using the GH Archive \cite{github_archive}. We combine this with data from the GitHub REST API \cite{github_api}, which provides extra details such as lines of code added or deleted and information about issues.
+  \item \textbf{Replication \& Validation}: Then, we reproduce the main result from Kreitmeir and Raschky — the temporary 50\% drop in Release events for Italian developers.
+  \item \textbf{Extension \& Analysis}: Finally, we apply the validated model to our new dependent variables (Volume and Defect Incidence) to test hypotheses H1 and H2. Together, these analyses will offer a richer understanding of how generative AI tools influence developer productivity — not only in terms of total output but also in terms of the quality of the produced code.
 \end{enumerate}
