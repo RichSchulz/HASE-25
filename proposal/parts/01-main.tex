@@ -9,7 +9,7 @@ Building on Kreitmeir and Raschky \cite{Kreitmeir2023}, who documented a 50\% de
 
 \section*{Methodology \& Data}
 
-The analysis will use historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the late March/early April 2023 ban. To this end, we will leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events, including \textit{PushEvents}, \textit{ReleaseEvents}, and \textit{IssueEvents} \cite{github_archive}. Because GH Archive data does not include information about developers’ locations, we will infer user countries based on their public profile information, following the methods from prior research \cite{Kreitmeir2023}. This information will be retrieved through the GitHub GraphQL API \cite{github_graphql_api}.
+The analysis will use historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the late March/early April 2023 ban. To this end, we will leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Because GH Archive data does not include information about developers’ locations, we will infer user countries based on their public profile information, following the methods from prior research \cite{Kreitmeir2023}.
 
 We will employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design to ensure causal inference, replicating the framework from the original paper. The analysis will compare the change in developer metrics in Italy (treatment group) against those in Austria and France (control group). We will collect and analyze data from before, during, and after then ban period.
 
@@ -36,7 +36,7 @@ All variables will be standardized at the developer-day level to account for ind
 
 
 \begin{enumerate}
-  \item \textbf{Data Collection \& Preparation}: First, we will gather GitHub event data from GH Archive, which we join with user data from the GitHub GraphQL API to infer developer locations. We will collect data of developers from Italy, Austria, and France for the weeks surrounding the ban period in early April 2023. As event data does not contain code changes or issue details, we will use the GitHub REST API \cite{github_api} to fetch corresponding details, such as LOC added/deleted and issue details. Finally, we will integrate data from all three sources to construct a unified dataset containing relevant activity metrics at the developer-day level.
+  \item \textbf{Data Collection \& Preparation}: First, we gather data about developers from Italy, Austria, and France for the weeks around the ban period in early April 2023 using the GH Archive \cite{github_archive}. We combine this with data from the GitHub REST API \cite{github_api}, which provides extra details such as lines of code added or deleted and information about issues.
   \item \textbf{Replication \& Validation}: Then, we reproduce the main result from Kreitmeir and Raschky — the temporary 50\% drop in Release events for Italian developers.
   \item \textbf{Extension \& Analysis}: Finally, we apply the validated model to our new dependent variables (Volume and Defect Incidence) to test hypotheses H1 and H2. Together, these analyses will offer a richer understanding of how generative AI tools influence developer productivity — not only in terms of total output but also in terms of the quality of the produced code.
 \end{enumerate}
