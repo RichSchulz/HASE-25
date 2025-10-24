@@ -1,17 +1,28 @@
-\section*{Motivation \& Related Work}
+\section*{Research Proposal}
 
-There has been substantial anecdotal evidence suggesting that AI-assisted coding tools such as ChatGPT \cite{openai_chatgpt} and GitHub Copilot have significantly increased developer productivity. However, recent empirical research has shown mixed results\cite{cui2025the, paradis2024doesaiimpactdevelopment, peng2023impactaideveloperproductivity}. While some studies find notable efficiency gains from integrating generative AI into software development workflows—for instance, faster code completion and reduced debugging time—other work points to limited or highly context-dependent effects, with improvements varying by task complexity, developer experience, and integration depth.
+Substantial anecdotal evidence suggests that AI-assisted coding tools such as ChatGPT \cite{openai_chatgpt} and GitHub Copilot have significantly increased developer productivity. However, recent empirical research has shown mixed results \cite{cui2025the, paradis2024doesaiimpactdevelopment, peng2023impactaideveloperproductivity}. While some studies find notable efficiency gains from integrating generative AI into software development workflows—for instance, faster code completion and reduced debugging time—other work points to limited or highly context-dependent effects, with improvements varying by task complexity, developer experience, and integration depth.
 
-Despite this growing literature, much of the existing evidence is correlational or based on controlled experiments detached from real-world settings. We still know little about how sudden changes in access to such tools affect developers in practice. In particular, the short-lived ChatGPT ban in Italy in early 2023 \cite{garante_ban_2023} offers a rare quasi-experimental opportunity to observe developers’ behavioral response to an abrupt disruption in access to a key AI tool.
+Despite this growing literature, much of the existing evidence is correlational or based on controlled experiments detached from real-world settings. We still know little about how sudden changes in access to such tools affect developers in practice. The short-lived ChatGPT ban in Italy in early 2023 \cite{garante_ban_2023} offers a rare quasi-experimental opportunity to observe developers’ behavioral responses to an abrupt disruption in access to a key AI tool.
 
-Building on Kreitmeir and Raschky \cite{Kreitmeir2023}, who documented a 50\% decline of release events in Italian open source projects during the ban, this research moves one step closer to identifying how this productivity loss materialized. However, the effect on the granular, day-to-day development process remains unquantified. It is unclear if developers wrote less code, or if the quality of their code suffered, leading to downstream effects. This is a critical question, as several studies now link AI assistance to negative quality outcomes, such an increased likelihood of introducing security vulnerabilities \cite{fu2025securityweaknessescopilotgeneratedcode, pearce2021asleepkeyboardassessingsecurity}. This research fills that gap by investigating how the sudden removal of a key AI tool impacts the fundamental activities of coding: the volume and quality of contributions.
+By analyzing GitHub repositories, Kreitmeir and Raschky \cite{Kreitmeir2023} documented a 50\% decline in release events in Italian open source projects during the first days of the ban. However, the effects on the granular, day-to-day development process remain unquantified. It remains unclear whether developers wrote less code or if code quality declined, which could potentially lead to downstream effects. This is a critical question, as several studies now link AI assistance to negative quality outcomes, such as an increased likelihood of introducing security vulnerabilities \cite{fu2025securityweaknessescopilotgeneratedcode, pearce2021asleepkeyboardassessingsecurity}.
+
+Building on Kreitmeir and Raschky's insights, we want to investigate additional effects the ban has had on developers by focusing on \textbf{code-level} and \textbf{issue-level metrics}. This approach will deepen our understanding of how generative AI tools (or the lack thereof) impact the day-to-day process of software development, through an empirical analysis of real-world GitHub activity.
+
+\pagebreak[3]
+
+Therefore, we propose the following hypotheses:
+
+\begin{itemize}
+  \item \textbf{H1 (Volume)}: The ChatGPT ban caused a statistically significant reduction in the daily volume of code contributed by developers in Italy, measured through lines of code added and deleted per user per day.
+  \item \textbf{H2 (Defect Incidence)}: Projects affected by the ban experienced an increase in bug-related issue creation in the subsequent weeks compared to the control group, indicating that the temporary loss of ChatGPT led to a higher defect rate or more post-release debugging effort.
+\end{itemize}
 
 
-\section*{Methodology \& Data}
+\subsection*{Methodology \& Data}
 
-The analysis will use historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the late March/early April 2023 ban. To this end, we will leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Because GH Archive data does not include information about developers’ locations, we will infer user countries based on their public profile information, following the methods from prior research \cite{Kreitmeir2023}.
+The empirical analysis will use historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the early April 2023 ban. To this end, we will leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Since GH Archive data does not include developers’ location information, we will infer user countries based on their public profiles, following the methods from prior research \cite{Kreitmeir2023}.
 
-We will employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design to ensure causal inference, replicating the framework from the original paper. The analysis will compare the change in developer metrics in Italy (treatment group) against those in Austria and France (control group). We will collect and analyze data from before, during, and after then ban period.
+We will employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design to ensure causal inference, replicating the framework from the original paper. The analysis will compare the change in developer metrics in Italy (treatment group) against those in Austria and France (control group). We will collect and analyze data from before, during, and after the ban period. 
 
 In contrast to the original study—which measured aggregate productivity through project releases—our analysis zooms in on code-level and issue-level metrics that capture the day-to-day development process. The main dependent variables are:
 
@@ -23,20 +34,10 @@ In contrast to the original study—which measured aggregate productivity throug
 All variables will be standardized at the developer-day level to account for individual differences in coding activity. Control variables will include developer experience (tenure on GitHub), project size, and temporal trends (day-of-week effects).
 
 
-\section*{Research Hypotheses}
-
-\begin{itemize}
-  \item \textbf{H1 (Volume)}: The ChatGPT ban caused a statistically significant reduction in the daily volume of code contributed by developers in the treatment group, measured through lines of code added and deleted per user per day.
-  \item \textbf{H2 (Defect Incidence)}: Projects affected by the ban experienced an increase in bug-related issue creation in the subsequent weeks compared to the control group, indicating that the temporary loss of ChatGPT led to a higher defect rate or more post-release debugging effort.
-\end{itemize}
-
-
-\section*{Project Outline}
-
-
+\subsection*{Project Outline}
 
 \begin{enumerate}
-  \item \textbf{Data Collection \& Preparation}: First, we gather data about developers from Italy, Austria, and France for the weeks around the ban period in early April 2023 using the GH Archive \cite{github_archive}. We combine this with data from the GitHub REST API \cite{github_api}, which provides extra details such as lines of code added or deleted and information about issues.
-  \item \textbf{Replication \& Validation}: Then, we reproduce the main result from Kreitmeir and Raschky — the temporary 50\% drop in Release events for Italian developers.
-  \item \textbf{Extension \& Analysis}: Finally, we apply the validated model to our new dependent variables (Volume and Defect Incidence) to test hypotheses H1 and H2. Together, these analyses will offer a richer understanding of how generative AI tools influence developer productivity — not only in terms of total output but also in terms of the quality of the produced code.
+  \item \textbf{Data Collection \& Preparation}: First, we will gather data about developers from Italy, Austria, and France for the weeks around the ban period in early April 2023 using the GH Archive \cite{github_archive}. We will combine this with data from the GitHub REST API \cite{github_api}, which will provide extra details such as lines of code added or deleted and information about issues.
+  \item \textbf{Replication \& Validation}: Then, we will reproduce the main result from Kreitmeir and Raschky — the temporary 50\% drop in Release events for Italian developers.
+  \item \textbf{Extension \& Analysis}: Finally, we will apply the validated model to our new dependent variables (Volume and Defect Incidence) to test hypotheses H1 and H2. Together, these analyses will offer a richer understanding of how generative AI tools influence developer productivity — not only in terms of total output but also in terms of the quality of the produced code.
 \end{enumerate}
