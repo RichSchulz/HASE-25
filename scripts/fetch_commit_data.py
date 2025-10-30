@@ -25,8 +25,14 @@ class CommitNotFound:
     job_id: str
 
 @dataclass(frozen=True)
-class RequestJob:
+class JobRequest:
     pass
+
+@dataclass(frozen=True)
+class JobResult:
+    row: dict
+    started: int
+    total: int
 
 request_queue = Queue()
 response_queue = Queue()
@@ -202,6 +208,20 @@ def get_top_repository_name(idx: int, projects_csv: str) -> str:
     return top_repos
 
 
+def read_job_row(cur: sqlite3.Cursor) -> Optional[dict]:
+    cur.execute(f"SELECT * FROM commits WHERE started_at IS NULL LIMIT 1")
+    return cur.fetchone()
+
+def read_job_counts(cur: sqlite3.Cursor) -> tuple[int, int]:
+    cur.execute(
+        """SELECT
+            COUNT(*) AS total_count,
+            SUM(CASE WHEN started_at IS NOT NULL THEN 1 ELSE 0 END) AS non_null_started_at_count
+        FROM commits"""
+    )
+    counts = cur.fetchone()
+    return (counts["non_null_started_at_count"], counts["total_count"])
+
 def write_job_started(cur: sqlite3.Cursor, id: int):
     cur.execute(f"UPDATE commits SET started_at = CURRENT_TIMESTAMP WHERE id = ?", (id,))
 
@@ -285,21 +305,22 @@ def db_worker():
     while True:
         req = request_queue.get()
 
-        if isinstance(req, RequestJob):
+        if isinstance(req, JobRequest):
             try: 
                 cur = job_conn.cursor()
-                cur.execute(f"SELECT * FROM commits WHERE started_at IS NULL LIMIT 1")
-                job_row = cur.fetchone()
+                job_row = read_job_row(cur)
 
                 if job_row is None:
                     print(f"[db_worker]: No more pending jobs found in database")
-                    job_conn.commit()
                     response_queue.put(None)
                     continue
 
                 write_job_started(cur, job_row["id"])
                 job_conn.commit()
-                response_queue.put(job_row)
+
+                started_count, total_count = read_job_counts(cur)
+
+                response_queue.put(JobResult(row=job_row, started=started_count, total=total_count))
 
             except Exception as e:
                 print(f"[db_worker]: Error in db_worker when reading jobs:", e)
@@ -356,19 +377,21 @@ def db_worker():
 
 def download_worker(idx: int, token: str):
     while True:
-        request_queue.put(RequestJob())
-        job_row = response_queue.get()
+        request_queue.put(JobRequest())
+        job_result = response_queue.get()
 
-        if job_row is None:
+        if not isinstance(job_result, JobResult):
             print(f"[download_worker {idx}]: Terminating")
             response_queue.task_done()
             break
+
+        job_row = job_result.row
 
         try:
             commit_sha = job_row['commit_sha']
             repository_name = job_row['repository_name']
 
-            print(f"[download_worker {idx}]: Downloading {commit_sha} from {repository_name}")
+            print(f"[download_worker {idx}]: Downloading ({job_result.started}/{job_result.total}) {commit_sha} from {repository_name}")
 
             commit_data = fetch_commit_data(
                 commit_sha=commit_sha,
