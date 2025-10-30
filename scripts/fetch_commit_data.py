@@ -273,7 +273,7 @@ def write_commit_row(cur: sqlite3.Cursor, commit_row: dict):
 
 
 def db_worker():
-    job_conn = sqlite3.connect("large_data/commits_all_sample.sqlite3", check_same_thread=False)
+    job_conn = sqlite3.connect("large_data/commits_all.sqlite3", check_same_thread=False)
     job_conn.row_factory = sqlite3.Row
 
     files_conn = sqlite3.connect("large_data/data_files.sqlite3", check_same_thread=False)
