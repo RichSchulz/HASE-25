@@ -1,31 +1,84 @@
+from dataclasses import dataclass
 import os
 import time
 from typing import Any, Optional
 import requests
 from dotenv import load_dotenv
 import pandas as pd
-import tempfile
-import shutil
-from pathlib import Path
+import sqlite3
+import threading
+from queue import Queue
 
 
-# Load environment variables from .env (if present)
-load_dotenv(override=True)
+class CommitNotFoundError(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class CommitResult:
+    job_id: str
+    file_rows: list[dict]
+    commit_row: dict
+
+@dataclass(frozen=True)
+class CommitNotFound:
+    job_id: str
+
+@dataclass(frozen=True)
+class RequestJob:
+    pass
+
+request_queue = Queue()
+response_queue = Queue()
+
+def create_data_files_table(conn: sqlite3.Connection):
+    conn.cursor()
+    conn.execute(
+        f"""CREATE TABLE IF NOT EXISTS file_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            country TEXT,
+            repository_name TEXT,
+            username TEXT,
+            commit_sha TEXT,
+            commit_message TEXT,
+            push_event_timestamp TIMESTAMP,
+            filename TEXT,
+            status TEXT,
+            additions INTEGER,
+            deletions INTEGER,
+            changes INTEGER,
+            patch TEXT
+        )"""
+    )
+    conn.commit()
+
+
+def create_data_commits_table(conn: sqlite3.Connection):
+    conn.cursor()
+    conn.execute(
+        f"""CREATE TABLE IF NOT EXISTS commit_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            country TEXT,
+            repository_name TEXT,
+            username TEXT,
+            commit_sha TEXT,
+            commit_message TEXT,
+            push_event_timestamp TIMESTAMP,
+            FILES INTEGER,
+            additions INTEGER,
+            deletions INTEGER,
+            changes INTEGER
+        )"""
+    )
+    conn.commit()
 
 
 def fetch_commit_data(
     commit_sha: str,
     repository_full_name: str,
-    token: Optional[str] = None,
+    token: str,
     timeout: int = 10,
 ) -> dict[str, Any]:
-    # Use provided token or read from environment
-    token = token or os.getenv("GITHUB_TOKEN")
-    if not token:
-        raise EnvironmentError(
-            "GITHUB_TOKEN not set. Please set it in your environment or in a .env file."
-        )
-
     # Expect repository_full_name to be "owner/repo"
     if "/" not in repository_full_name:
         raise ValueError(
@@ -48,7 +101,7 @@ def fetch_commit_data(
 
     # Not found
     if resp.status_code == 404:
-        raise ValueError(
+        raise CommitNotFoundError(
             f"Commit '{commit_sha}' or repository '{repository_full_name}' not found (HTTP 404)."
         )
 
@@ -79,18 +132,20 @@ def fetch_commit_data(
     )
 
 
-def commit_json_to_rows(commit_row: Any, commit_json: dict) -> list[dict]:
+def commit_json_to_file_rows(commit_row: Any, commit_json: dict) -> list[dict]:
     rows = []
 
-    username = commit_row.username
-    repsitory_name = commit_row.repository_name
-    commit_sha = commit_row.commit_sha
-    commit_message = commit_row.commit_message
-    push_event_timestamp = commit_row.event_timestamp
+    country = commit_row["country"]
+    username = commit_row["username"]
+    repsitory_name = commit_row["repository_name"]
+    commit_sha = commit_row["commit_sha"]
+    commit_message = commit_row["commit_message"]
+    push_event_timestamp = commit_row["event_timestamp"]
     files = commit_json.get("files") or []
 
     for file in files:
         row = {}
+        row["country"] = country
         row["repository_name"] = repsitory_name
         row["username"] = username
         row["commit_sha"] = commit_sha
@@ -108,6 +163,32 @@ def commit_json_to_rows(commit_row: Any, commit_json: dict) -> list[dict]:
     return rows
 
 
+def commit_json_to_commit_row(commit_row: Any, commit_json: dict) -> dict:
+    country = commit_row["country"]
+    username = commit_row["username"]
+    repsitory_name = commit_row["repository_name"]
+    commit_sha = commit_row["commit_sha"]
+    commit_message = commit_row["commit_message"]
+    push_event_timestamp = commit_row["event_timestamp"]
+    files = commit_json.get("files") or []
+    additions = commit_json.get("stats", {}).get("additions")
+    deletions = commit_json.get("stats", {}).get("deletions")
+    changes = commit_json.get("stats", {}).get("total")
+
+    return {
+        'country': country,
+        'repository_name': repsitory_name,
+        'username': username,
+        'commit_sha': commit_sha,
+        'commit_message': commit_message,
+        'push_event_timestamp': push_event_timestamp,
+        'files': len(files),
+        'additions': additions,
+        'deletions': deletions,
+        'changes': changes,
+    }
+
+
 def get_top_repository_name(idx: int, projects_csv: str) -> str:
     # Read top projects
     if not os.path.exists(projects_csv):
@@ -121,124 +202,240 @@ def get_top_repository_name(idx: int, projects_csv: str) -> str:
     return top_repos
 
 
-def fetch_commits_and_update_csv(
-    repository_name: str,
-    commits_csv: str,
-    output_dir: str,
-    chunksize: int = 10000,
-    commits_limit: Optional[int] = None,
-):
-    commits_path = Path(commits_csv)
-    if not commits_path.exists():
-        raise FileNotFoundError(f"commits CSV not found: {commits_csv}")
+def write_job_started(cur: sqlite3.Cursor, id: int):
+    cur.execute(f"UPDATE commits SET started_at = CURRENT_TIMESTAMP WHERE id = ?", (id,))
 
-    csv_file_name = f"commit_changes__{repository_name.replace('/', '--')}.csv"
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = Path(os.path.join(output_dir, csv_file_name))
 
-    tmpf = tempfile.NamedTemporaryFile(delete=False, prefix="tmp_commit_changes__", suffix=".csv", dir=str(output_path.parent))
-    tmpf_name = tmpf.name
-    tmpf.close()
+def write_job_completed(cur: sqlite3.Cursor, id: str):
+    cur.execute(f"UPDATE commits SET completed_at = CURRENT_TIMESTAMP WHERE id = ?", (id,))
 
-    first_write = True
 
-    def limit_reached() -> bool:
-        return commits_limit is not None and commits_idx >= commits_limit
+def write_file_rows(cur: sqlite3.Cursor, file_rows: list[dict]):
+    cur.executemany(
+        f"""INSERT INTO file_data (
+            country,
+            repository_name,
+            username,
+            commit_sha,
+            commit_message,
+            push_event_timestamp,
+            filename,
+            status,
+            additions,
+            deletions,
+            changes,
+            patch
+        ) VALUES (
+            :country,
+            :repository_name,
+            :username,
+            :commit_sha,
+            :commit_message,
+            :push_event_timestamp,
+            :filename,
+            :status,
+            :additions,
+            :deletions,
+            :changes,
+            :patch
+        )""",
+        file_rows
+    )
 
-    def ensure_columns(df: pd.DataFrame, cols: list):
-        for c in cols:
-            if c not in df.columns:
-                df[c] = pd.NA
 
-    col_names = [
-        "repository_name",
-        "username",
-        "commit_sha",
-        "commit_message",
-        "push_event_timestamp",
-        "filename",
-        "status",
-        "additions",
-        "deletions",
-        "changes",
-        "patch",
-    ]
+def write_commit_row(cur: sqlite3.Cursor, commit_row: dict):
+    cur.execute(
+        f"""INSERT INTO commit_data (
+            country,
+            repository_name,
+            username,
+            commit_sha,
+            commit_message,
+            push_event_timestamp,
+            files,
+            additions,
+            deletions,
+            changes
+        ) VALUES (
+            :country,
+            :repository_name,
+            :username,
+            :commit_sha,
+            :commit_message,
+            :push_event_timestamp,
+            :files,
+            :additions,
+            :deletions,
+            :changes
+        )""",
+        commit_row
+    )
 
-    commits_idx = 0
 
-    reader = pd.read_csv(commits_csv, dtype=str, chunksize=chunksize)
-    chunk_idx = 0
-    for chunk in reader:
-        if limit_reached():
-            break
+def db_worker():
+    job_conn = sqlite3.connect("large_data/commits_all_sample.sqlite3", check_same_thread=False)
+    job_conn.row_factory = sqlite3.Row
 
-        chunk_idx += 1
-        chunk = chunk.copy()
+    files_conn = sqlite3.connect("large_data/data_files.sqlite3", check_same_thread=False)
+    commits_conn = sqlite3.connect("large_data/data_commits.sqlite3", check_same_thread=False)
 
-        # Ensure expected columns exist locally
-        if "repository_name" not in chunk.columns or "commit_sha" not in chunk.columns:
-            raise ValueError("commits CSV must contain 'repository_name' and 'commit_sha' columns")
+    create_data_files_table(files_conn)
+    create_data_commits_table(commits_conn)
 
-        ensure_columns(chunk, col_names)
+    while True:
+        req = request_queue.get()
 
-        # Find rows that belong to top repos
-        repsitory_commits = chunk[chunk["repository_name"] == repository_name]
+        if isinstance(req, RequestJob):
+            try: 
+                cur = job_conn.cursor()
+                cur.execute(f"SELECT * FROM commits WHERE started_at IS NULL LIMIT 1")
+                job_row = cur.fetchone()
 
-        write_cache: list[dict[str, Any]] = []
+                if job_row is None:
+                    print(f"[db_worker]: No more pending jobs found in database")
+                    job_conn.commit()
+                    response_queue.put(None)
+                    continue
 
-        # For each unique commit_sha in this subset, fetch if we haven't yet
-        for row in repsitory_commits.itertuples(index=False):
-            if limit_reached():
-                break
-
-            commit_sha = row.commit_sha
-            if pd.isna(commit_sha) or not isinstance(commit_sha, str) or commit_sha.strip() == "":
-                continue
-
-            commit_sha = commit_sha.strip()
-
-            try:
-                commits_idx += 1
-                print(f"Fetching {commit_sha} from {repository_name} (commit {commits_idx}, chunk {chunk_idx})")
-                commit_json = fetch_commit_data(commit_sha, repository_name)
-                file_rows = commit_json_to_rows(row, commit_json)
-                write_cache.extend(file_rows)
+                write_job_started(cur, job_row["id"])
+                job_conn.commit()
+                response_queue.put(job_row)
 
             except Exception as e:
-                # Log and continue; put a placeholder so we don't retry repeatedly
-                print(f"Warning: failed to fetch {commit_sha} from {repository_name}: {e}")
+                print(f"[db_worker]: Error in db_worker when reading jobs:", e)
+                response_queue.put(None)
+                continue
 
-        row_df = pd.DataFrame(write_cache, columns=col_names)
-        if first_write:
-            row_df.to_csv(tmpf_name, index=False, mode="w", encoding="utf-8")
-            first_write = False
+            finally:
+                request_queue.task_done()
+
+        elif isinstance(req, CommitResult):
+            try:
+                files_cur = files_conn.cursor()
+                write_file_rows(files_cur, req.file_rows)
+                files_conn.commit()
+
+                commits_cur = commits_conn.cursor()
+                write_commit_row(commits_cur, req.commit_row)
+                commits_conn.commit()
+
+                cur = job_conn.cursor()
+                write_job_completed(cur, req.job_id)
+                job_conn.commit()
+
+            except Exception as e:
+                print(f"[db_worker]: Error in db_worker when writing commit result:", e)
+                continue
+
+            finally:
+                request_queue.task_done()
+
+        elif isinstance(req, CommitNotFound):
+            try:
+                cur = job_conn.cursor()
+                write_job_completed(cur, req.job_id)
+                job_conn.commit()
+
+            except Exception as e:
+                print(f"[db_worker]: Error in db_worker when writing commit not found result:", e)
+                continue
+
+            finally:
+                request_queue.task_done()
+
         else:
-            row_df.to_csv(tmpf_name, index=False, mode="a", header=False, encoding="utf-8")
+            print(f"[db_worker]: Terminating")
+            request_queue.task_done()
+            break
 
-    # Move temp file to the output path (do not overwrite original commits_csv)
-    shutil.move(tmpf_name, str(output_path))
-    print(f"Wrote commit changes to CSV to: {output_path}")
+
+    files_conn.close()
+    commits_conn.close()
+    job_conn.close()
+
+
+def download_worker(idx: int, token: str):
+    while True:
+        request_queue.put(RequestJob())
+        job_row = response_queue.get()
+
+        if job_row is None:
+            print(f"[download_worker {idx}]: Terminating")
+            response_queue.task_done()
+            break
+
+        try:
+            commit_sha = job_row['commit_sha']
+            repository_name = job_row['repository_name']
+
+            print(f"[download_worker {idx}]: Downloading {commit_sha} from {repository_name}")
+
+            commit_data = fetch_commit_data(
+                commit_sha=commit_sha,
+                repository_full_name=repository_name,
+                token=token
+            )
+
+            file_rows = commit_json_to_file_rows(job_row, commit_data)
+            commit_row = commit_json_to_commit_row(job_row, commit_data)
+
+            request_queue.put(CommitResult(job_id=job_row['id'], file_rows=file_rows, commit_row=commit_row))
+
+        except CommitNotFoundError as e:
+            print(f"[download_worker {idx}]: Commit not found, still marking as completed:", e)
+            request_queue.put(CommitNotFound(job_id=job_row['id']))
+            continue
+
+        except Exception as e:
+            print(f"[download_worker {idx}]: Error in download_worker when fetching commit data:", e)
+            continue
+
+        finally:
+            response_queue.task_done()
 
 
 def main():
     load_dotenv(override=True)
 
-    # top_projects = [get_top_repository_name(i, "data/italy_projects_fulltime.csv") for i in range(10)]
+    num_threads = 4
+    threads: list[threading.Thread] = []
 
-    # for project in top_projects:
-    #     fetch_commits_and_update_csv(
-    #         repository_name=project,
-    #         commits_csv="large_data/commits_all_italy.csv",
-    #         output_dir="large_data",
-    #         # commits_limit=5 # set this for testing
-    #     )
+    db_thread = threading.Thread(target=db_worker)
+    db_thread.start()
 
-    fetch_commits_and_update_csv(
-        repository_name="pagopa/io-app",
-        commits_csv="large_data/commits_all_italy.csv",
-        output_dir="large_data",
-        # commits_limit=5 # set this for testing
-    )
+    for i in range(num_threads):
+        idx = i+1
+
+        token_name = f"GITHUB_TOKEN_{idx}"
+        token = os.getenv(token_name)
+        if not token:
+            raise EnvironmentError(
+                f"{token_name} not set. Please set it in your environment or in a .env file."
+            )
+
+        t = threading.Thread(target=download_worker, args=(idx,token,))
+        t.start()
+        threads.append(t)
+
+    # Wait for all downloads to finish
+    print("Waiting for downloads threads to finish")
+    for t in threads:
+        t.join()
+
+    # Wait for all downloads to be written
+    print("Waiting for response_queue to finish")
+    response_queue.join()
+
+    # Signal that all downloads have finished 
+    request_queue.put(None)
+
+    # Wait for all requests to finish
+    print("Waiting for request_queue to finish")
+    request_queue.join()
+
+    # Wait for db worker thread to finish
+    print("Waiting for db_thread to finish")
+    db_thread.join()
 
 
 if __name__ == "__main__":
