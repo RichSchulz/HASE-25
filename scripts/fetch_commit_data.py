@@ -16,13 +16,9 @@ class CommitNotFoundError(Exception):
 
 @dataclass(frozen=True)
 class CommitResult:
-    job_id: str
+    job_ids: list[int]
     file_rows: list[dict]
-    commit_row: dict
-
-@dataclass(frozen=True)
-class CommitNotFound:
-    job_id: str
+    commit_rows: list[dict]
 
 @dataclass(frozen=True)
 class JobRequest:
@@ -30,7 +26,7 @@ class JobRequest:
 
 @dataclass(frozen=True)
 class JobResult:
-    row: dict
+    rows: list[dict]
     started: int
     total: int
 
@@ -38,8 +34,8 @@ request_queue = Queue()
 response_queue = Queue()
 
 def create_data_files_table(conn: sqlite3.Connection):
-    conn.cursor()
-    conn.execute(
+    cur = conn.cursor()
+    cur.execute(
         f"""CREATE TABLE IF NOT EXISTS file_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             country TEXT,
@@ -60,8 +56,8 @@ def create_data_files_table(conn: sqlite3.Connection):
 
 
 def create_data_commits_table(conn: sqlite3.Connection):
-    conn.cursor()
-    conn.execute(
+    cur = conn.cursor()
+    cur.execute(
         f"""CREATE TABLE IF NOT EXISTS commit_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             country TEXT,
@@ -75,6 +71,15 @@ def create_data_commits_table(conn: sqlite3.Connection):
             deletions INTEGER,
             changes INTEGER
         )"""
+    )
+    conn.commit()
+
+
+def reset_incomplete_downloads(conn: sqlite3.Connection):
+    cur = conn.cursor()
+    cur.execute(
+        f"""UPDATE commits SET started_at = NULL WHERE completed_at IS NULL
+        """
     )
     conn.commit()
 
@@ -208,9 +213,9 @@ def get_top_repository_name(idx: int, projects_csv: str) -> str:
     return top_repos
 
 
-def read_job_row(cur: sqlite3.Cursor) -> Optional[dict]:
-    cur.execute(f"SELECT * FROM commits WHERE started_at IS NULL LIMIT 1")
-    return cur.fetchone()
+def read_job_row(cur: sqlite3.Cursor, limit: int) -> list[dict]:
+    cur.execute(f"SELECT * FROM commits WHERE started_at IS NULL LIMIT {limit}")
+    return cur.fetchall()
 
 def read_job_counts(cur: sqlite3.Cursor) -> tuple[int, int]:
     cur.execute(
@@ -222,12 +227,14 @@ def read_job_counts(cur: sqlite3.Cursor) -> tuple[int, int]:
     counts = cur.fetchone()
     return (counts["non_null_started_at_count"], counts["total_count"])
 
-def write_job_started(cur: sqlite3.Cursor, id: int):
-    cur.execute(f"UPDATE commits SET started_at = CURRENT_TIMESTAMP WHERE id = ?", (id,))
+def write_jobs_started(cur: sqlite3.Cursor, ids: list[int]):
+    in_ids = ", ".join("?" for _ in ids)
+    cur.execute(f"UPDATE commits SET started_at = CURRENT_TIMESTAMP WHERE id IN ({in_ids})", ids)
 
 
-def write_job_completed(cur: sqlite3.Cursor, id: str):
-    cur.execute(f"UPDATE commits SET completed_at = CURRENT_TIMESTAMP WHERE id = ?", (id,))
+def write_jobs_completed(cur: sqlite3.Cursor, ids: list[int]):
+    in_ids = ", ".join("?" for _ in ids)
+    cur.execute(f"UPDATE commits SET completed_at = CURRENT_TIMESTAMP WHERE id IN ({in_ids})", ids)
 
 
 def write_file_rows(cur: sqlite3.Cursor, file_rows: list[dict]):
@@ -263,8 +270,8 @@ def write_file_rows(cur: sqlite3.Cursor, file_rows: list[dict]):
     )
 
 
-def write_commit_row(cur: sqlite3.Cursor, commit_row: dict):
-    cur.execute(
+def write_commit_rows(cur: sqlite3.Cursor, commit_rows: list[dict]):
+    cur.executemany(
         f"""INSERT INTO commit_data (
             country,
             repository_name,
@@ -288,7 +295,7 @@ def write_commit_row(cur: sqlite3.Cursor, commit_row: dict):
             :deletions,
             :changes
         )""",
-        commit_row
+        commit_rows
     )
 
 
@@ -302,25 +309,29 @@ def db_worker():
     create_data_files_table(files_conn)
     create_data_commits_table(commits_conn)
 
+    # Reset downloads from a previous run (started_at set but completed_at not set)
+    reset_incomplete_downloads(job_conn)
+
     while True:
         req = request_queue.get()
 
         if isinstance(req, JobRequest):
             try: 
                 cur = job_conn.cursor()
-                job_row = read_job_row(cur)
+                job_rows = read_job_row(cur, limit=50)
 
-                if job_row is None:
+                if not job_rows:
                     print(f"[db_worker]: No more pending jobs found in database")
                     response_queue.put(None)
                     continue
 
-                write_job_started(cur, job_row["id"])
+                job_ids = [row["id"] for row in job_rows]
+                write_jobs_started(cur, ids=job_ids)
                 job_conn.commit()
 
                 started_count, total_count = read_job_counts(cur)
 
-                response_queue.put(JobResult(row=job_row, started=started_count, total=total_count))
+                response_queue.put(JobResult(rows=job_rows, started=started_count, total=total_count))
 
             except Exception as e:
                 print(f"[db_worker]: Error in db_worker when reading jobs:", e)
@@ -337,28 +348,15 @@ def db_worker():
                 files_conn.commit()
 
                 commits_cur = commits_conn.cursor()
-                write_commit_row(commits_cur, req.commit_row)
+                write_commit_rows(commits_cur, req.commit_rows)
                 commits_conn.commit()
 
                 cur = job_conn.cursor()
-                write_job_completed(cur, req.job_id)
+                write_jobs_completed(cur, req.job_ids)
                 job_conn.commit()
 
             except Exception as e:
                 print(f"[db_worker]: Error in db_worker when writing commit result:", e)
-                continue
-
-            finally:
-                request_queue.task_done()
-
-        elif isinstance(req, CommitNotFound):
-            try:
-                cur = job_conn.cursor()
-                write_job_completed(cur, req.job_id)
-                job_conn.commit()
-
-            except Exception as e:
-                print(f"[db_worker]: Error in db_worker when writing commit not found result:", e)
                 continue
 
             finally:
@@ -381,45 +379,55 @@ def download_worker(idx: int, token: str):
         job_result = response_queue.get()
 
         if not isinstance(job_result, JobResult):
-            print(f"[download_worker {idx}]: Terminating")
+            print(f"[download_worker-{idx}]: Terminating")
             response_queue.task_done()
             break
 
-        job_row = job_result.row
+        job_rows = job_result.rows
+        job_rows_count = len(job_rows)
 
-        try:
-            commit_sha = job_row['commit_sha']
-            repository_name = job_row['repository_name']
+        job_ids: list[int] = []
+        file_rows: list[dict] = []
+        commit_rows: list[dict] = []
 
-            print(f"[download_worker {idx}]: Downloading ({job_result.started}/{job_result.total}) {commit_sha} from {repository_name}")
+        for job_idx, job_row in enumerate(job_rows):
+            job_id = job_row["id"]
 
-            commit_data = fetch_commit_data(
-                commit_sha=commit_sha,
-                repository_full_name=repository_name,
-                token=token
-            )
+            try:
+                commit_sha = job_row['commit_sha']
+                repository_name = job_row['repository_name']
 
-            file_rows = commit_json_to_file_rows(job_row, commit_data)
-            commit_row = commit_json_to_commit_row(job_row, commit_data)
+                # job-result.started is the count of all jobs in this batch, so we need
+                # to calculate the how many jobs have actually been downloaded
+                started_count = job_result.started-job_rows_count+job_idx+1
+                
+                print(f"[download_worker-{idx}]: Downloading ({started_count}/{job_result.total}) {commit_sha} from {repository_name}")
 
-            request_queue.put(CommitResult(job_id=job_row['id'], file_rows=file_rows, commit_row=commit_row))
+                commit_data = fetch_commit_data(
+                    commit_sha=commit_sha,
+                    repository_full_name=repository_name,
+                    token=token
+                )
 
-        except CommitNotFoundError as e:
-            print(f"[download_worker {idx}]: Commit not found, still marking as completed:", e)
-            request_queue.put(CommitNotFound(job_id=job_row['id']))
-            continue
+                job_ids.append(job_id)
+                file_rows.extend(commit_json_to_file_rows(job_row, commit_data))
+                commit_rows.append(commit_json_to_commit_row(job_row, commit_data))
 
-        except Exception as e:
-            print(f"[download_worker {idx}]: Error in download_worker when fetching commit data:", e)
-            continue
+            except CommitNotFoundError as e:
+                print(f"[download_worker-{idx}]: Commit not found, still marking as completed:", e)
+                job_ids.append(job_id)
 
-        finally:
-            response_queue.task_done()
+            except Exception as e:
+                print(f"[download_worker-{idx}]: Error in download_worker when fetching commit data:", e)
+
+        request_queue.put(CommitResult(job_ids=job_ids, file_rows=file_rows, commit_rows=commit_rows)) 
+        response_queue.task_done()
 
 
 def main():
     load_dotenv(override=True)
 
+    # must match the number of github tokens in env
     num_threads = 4
     threads: list[threading.Thread] = []
 
