@@ -31,8 +31,6 @@ class JobResult:
     started: int
     total: int
 
-request_queue = Queue()
-response_queue = Queue()
 
 def create_data_files_table(conn: sqlite3.Connection):
     cur = conn.cursor()
@@ -90,8 +88,7 @@ def fetch_commit_data(
     repository_full_name: str,
     token: str,
     timeout: int = 10,
-    retry_count: int = 0,
-) -> dict[str, Any]:
+) -> dict[str, Any] | int:
     # Expect repository_full_name to be "owner/repo"
     if "/" not in repository_full_name:
         raise ValueError(
@@ -130,24 +127,7 @@ def fetch_commit_data(
         if remaining == "0" and reset is not None:
             try:
                 reset_ts = int(reset)
-                wait_seconds = max(0, reset_ts - int(time.time()))
-
-                if retry_count == 0:
-                    print(f"Rate limit exceeded, retrying in {wait_seconds}s")
-                    time.sleep(wait_seconds + 1)
-
-                    return fetch_commit_data(
-                        commit_sha=commit_sha,
-                        repository_full_name=repository_full_name,
-                        token=token,
-                        timeout=timeout,
-                        retry_count=retry_count+1,
-                    )
-                else:
-                    raise RuntimeError(
-                        f"Rate limit exceeded. X-RateLimit-Remaining=0. "
-                        f"Rate limit resets in {wait_seconds} seconds (at unix {reset_ts})."
-                    )
+                return reset_ts
             except ValueError:
                 # header not integer for some reason
                 raise RuntimeError("Rate limit exceeded (403).")
@@ -248,11 +228,17 @@ def read_job_counts(cur: sqlite3.Cursor) -> tuple[int, int]:
     return (counts["non_null_started_at_count"], counts["total_count"])
 
 def write_jobs_started(cur: sqlite3.Cursor, ids: list[int]):
+    if not ids:
+        return
+
     in_ids = ", ".join("?" for _ in ids)
     cur.execute(f"UPDATE commits SET started_at = CURRENT_TIMESTAMP WHERE id IN ({in_ids})", ids)
 
 
 def write_jobs_completed(cur: sqlite3.Cursor, ids: list[int]):
+    if not ids:
+        return
+
     in_ids = ", ".join("?" for _ in ids)
     cur.execute(f"UPDATE commits SET completed_at = CURRENT_TIMESTAMP WHERE id IN ({in_ids})", ids)
 
@@ -319,7 +305,7 @@ def write_commit_rows(cur: sqlite3.Cursor, commit_rows: list[dict]):
     )
 
 
-def db_worker():
+def db_worker(request_queue: Queue, response_queue: Queue):
     job_conn = sqlite3.connect("large_data/commits_all.sqlite3", check_same_thread=False)
     job_conn.row_factory = sqlite3.Row
 
@@ -336,7 +322,7 @@ def db_worker():
         req = request_queue.get()
 
         if isinstance(req, JobRequest):
-            try: 
+            try:
                 cur = job_conn.cursor()
                 job_rows = read_job_row(cur, limit=50)
 
@@ -393,8 +379,8 @@ def db_worker():
     job_conn.close()
 
 
-def download_worker(idx: int, token: str):
-    while True:
+def download_worker(request_queue: Queue, response_queue: Queue, stop_event: threading.Event, idx: int, token: str):
+    while not stop_event.is_set():
         request_queue.put(JobRequest())
         job_result = response_queue.get()
 
@@ -411,6 +397,9 @@ def download_worker(idx: int, token: str):
         commit_rows: list[dict] = []
 
         for job_idx, job_row in enumerate(job_rows):
+            if stop_event.is_set():
+                break
+
             job_id = job_row["id"]
 
             try:
@@ -423,15 +412,30 @@ def download_worker(idx: int, token: str):
                 
                 print(f"[download_worker-{idx}]: Downloading ({started_count}/{job_result.total}) {commit_sha} from {repository_name}")
 
-                commit_data = fetch_commit_data(
-                    commit_sha=commit_sha,
-                    repository_full_name=repository_name,
-                    token=token
-                )
+                # Handle waiting when rate limiting is reached in a way that allows stopping if stop_event is set
+                continue_at = 0
+                while not stop_event.is_set():
+                    current_time = time.time()
+                    if current_time > continue_at:
+                        fetch_result = fetch_commit_data(
+                            commit_sha=commit_sha,
+                            repository_full_name=repository_name,
+                            token=token
+                        )
 
-                job_ids.append(job_id)
-                file_rows.extend(commit_json_to_file_rows(job_row, commit_data))
-                commit_rows.append(commit_json_to_commit_row(job_row, commit_data))
+                        if isinstance(fetch_result, int):
+                            continue_at = fetch_result
+                            wait_seconds = max(0, continue_at - int(current_time))
+                            print(f"[download_worker-{idx}]: Time limit reached, waiting for {wait_seconds}s")
+                        else:
+                            commit_data = fetch_result
+                            job_ids.append(job_id)
+                            file_rows.extend(commit_json_to_file_rows(job_row, commit_data))
+                            commit_rows.append(commit_json_to_commit_row(job_row, commit_data))
+                            break
+                    
+                    time.sleep(0.5)
+
 
             except CommitNotFoundError as e:
                 print(f"[download_worker-{idx}]: Commit not found, still marking as completed:", e)
@@ -449,9 +453,17 @@ def main():
 
     # must match the number of github tokens in env
     num_threads = 8
+
+    stop_event = threading.Event()
+    request_queue = Queue()
+    response_queue = Queue()
+
     threads: list[threading.Thread] = []
 
-    db_thread = threading.Thread(target=db_worker)
+    db_thread = threading.Thread(target=db_worker, kwargs={
+        'request_queue': request_queue,
+        'response_queue': response_queue
+    })
     db_thread.start()
 
     for i in range(num_threads):
@@ -465,29 +477,44 @@ def main():
                 f"{token_name} not set. Please set it in your environment or in a .env file."
             )
 
-        t = threading.Thread(target=download_worker, args=(idx,token,))
+        t = threading.Thread(target=download_worker, kwargs={
+            'request_queue': request_queue,
+            'response_queue': response_queue,
+            'stop_event': stop_event,
+            'idx': idx,
+            'token': token
+        })
         t.start()
         threads.append(t)
 
-    # Wait for all downloads to finish
-    print("Waiting for downloads threads to finish")
-    for t in threads:
-        t.join()
+    try:
+        while any(t.is_alive() for t in threads):
+            time.sleep(0.5)
+    
+    except KeyboardInterrupt:
+        print("\nCtrl+C detected. Stopping downloads...")
+        stop_event.set()
 
-    # Wait for all downloads to be written
-    print("Waiting for response_queue to finish")
-    response_queue.join()
+    finally:
+        # Wait for all downloads to finish
+        print("Waiting for download threads to finish")
+        for t in threads:
+            t.join()
 
-    # Signal that all downloads have finished 
-    request_queue.put(None)
+        # Wait for all downloads to be written
+        print("Waiting for response_queue to finish")
+        response_queue.join()
 
-    # Wait for all requests to finish
-    print("Waiting for request_queue to finish")
-    request_queue.join()
+        # Signal that all downloads have finished 
+        request_queue.put(None)
 
-    # Wait for db worker thread to finish
-    print("Waiting for db_thread to finish")
-    db_thread.join()
+        # Wait for all requests to finish
+        print("Waiting for request_queue to finish")
+        request_queue.join()
+
+        # Wait for db worker thread to finish
+        print("Waiting for db_thread to finish")
+        db_thread.join()
 
 
 if __name__ == "__main__":
