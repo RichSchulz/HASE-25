@@ -448,16 +448,17 @@ def main():
     load_dotenv(override=True)
 
     # must match the number of github tokens in env
-    num_threads = 4
+    num_threads = 8
     threads: list[threading.Thread] = []
 
     db_thread = threading.Thread(target=db_worker)
     db_thread.start()
 
     for i in range(num_threads):
+        token_idx = i%4+1
         idx = i+1
 
-        token_name = f"GITHUB_TOKEN_{idx}"
+        token_name = f"GITHUB_TOKEN_{token_idx}"
         token = os.getenv(token_name)
         if not token:
             raise EnvironmentError(
