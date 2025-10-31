@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import pandas as pd
 import sqlite3
 import threading
+import time
 from queue import Queue
 
 
@@ -89,6 +90,7 @@ def fetch_commit_data(
     repository_full_name: str,
     token: str,
     timeout: int = 10,
+    retry_count: int = 0,
 ) -> dict[str, Any]:
     # Expect repository_full_name to be "owner/repo"
     if "/" not in repository_full_name:
@@ -113,7 +115,12 @@ def fetch_commit_data(
     # Not found
     if resp.status_code == 404:
         raise CommitNotFoundError(
-            f"Commit '{commit_sha}' or repository '{repository_full_name}' not found (HTTP 404)."
+            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 404): {resp.text}."
+        )
+    
+    if resp.status_code == 422:
+        raise CommitNotFoundError(
+            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 422): {resp.text}."
         )
 
     # Authentication or rate limit issues
@@ -124,10 +131,23 @@ def fetch_commit_data(
             try:
                 reset_ts = int(reset)
                 wait_seconds = max(0, reset_ts - int(time.time()))
-                raise RuntimeError(
-                    f"Rate limit exceeded. X-RateLimit-Remaining=0. "
-                    f"Rate limit resets in {wait_seconds} seconds (at unix {reset_ts})."
-                )
+
+                if retry_count == 0:
+                    print(f"Rate limit exceeded, retrying in {wait_seconds}s")
+                    time.sleep(wait_seconds + 1)
+
+                    return fetch_commit_data(
+                        commit_sha=commit_sha,
+                        repository_full_name=repository_full_name,
+                        token=token,
+                        timeout=timeout,
+                        retry_count=retry_count+1,
+                    )
+                else:
+                    raise RuntimeError(
+                        f"Rate limit exceeded. X-RateLimit-Remaining=0. "
+                        f"Rate limit resets in {wait_seconds} seconds (at unix {reset_ts})."
+                    )
             except ValueError:
                 # header not integer for some reason
                 raise RuntimeError("Rate limit exceeded (403).")
