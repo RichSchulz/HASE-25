@@ -369,9 +369,10 @@ def db_worker(request_queue: Queue, response_queue: Queue):
                 request_queue.task_done()
 
         else:
-            print(f"[db_worker]: Terminating")
             request_queue.task_done()
-            break
+            if request_queue.empty():
+                print(f"[db_worker]: Terminating")
+                break
 
 
     files_conn.close()
