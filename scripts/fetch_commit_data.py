@@ -115,6 +115,11 @@ def fetch_commit_data(
             f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 404): {resp.text}."
         )
     
+    if resp.status_code == 409:
+        raise CommitNotFoundError(
+            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 409): {resp.text}."
+        )
+    
     if resp.status_code == 422:
         raise CommitNotFoundError(
             f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 422): {resp.text}."
