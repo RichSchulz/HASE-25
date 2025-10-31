@@ -416,7 +416,7 @@ def download_worker(request_queue: Queue, response_queue: Queue, stop_event: thr
                 continue_at = 0
                 while not stop_event.is_set():
                     current_time = time.time()
-                    if current_time > continue_at:
+                    if current_time > continue_at+1:
                         fetch_result = fetch_commit_data(
                             commit_sha=commit_sha,
                             repository_full_name=repository_name,
