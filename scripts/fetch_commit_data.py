@@ -444,6 +444,9 @@ def download_worker(request_queue: Queue, response_queue: Queue, stop_event: thr
             except Exception as e:
                 print(f"[download_worker-{idx}]: Error in download_worker when fetching commit data:", e)
 
+        if stop_event.is_set():
+            print(f"[download_worker-{idx}]: Terminating (stop_event)")
+
         request_queue.put(CommitResult(job_ids=job_ids, file_rows=file_rows, commit_rows=commit_rows)) 
         response_queue.task_done()
 
