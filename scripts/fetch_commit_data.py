@@ -379,13 +379,13 @@ def db_worker(request_queue: Queue, response_queue: Queue):
     job_conn.close()
 
 
-def download_worker(request_queue: Queue, response_queue: Queue, stop_event: threading.Event, idx: int, token: str):
+def download_worker(request_queue: Queue, response_queue: Queue, stop_event: threading.Event, thread_id: int, token: str):
     while not stop_event.is_set():
         request_queue.put(JobRequest())
         job_result = response_queue.get()
 
         if not isinstance(job_result, JobResult):
-            print(f"[download_worker-{idx}]: Terminating")
+            print(f"[download_worker-{thread_id}]: Terminating")
             response_queue.task_done()
             break
 
@@ -410,7 +410,7 @@ def download_worker(request_queue: Queue, response_queue: Queue, stop_event: thr
                 # to calculate the how many jobs have actually been downloaded
                 started_count = job_result.started-job_rows_count+job_idx+1
                 
-                print(f"[download_worker-{idx}]: Downloading ({started_count}/{job_result.total}) {commit_sha} from {repository_name}")
+                print(f"[download_worker-{thread_id}]: Downloading ({started_count}/{job_result.total}) {commit_sha} from {repository_name}")
 
                 # Handle waiting when rate limiting is reached in a way that allows stopping if stop_event is set
                 continue_at = 0
@@ -426,7 +426,7 @@ def download_worker(request_queue: Queue, response_queue: Queue, stop_event: thr
                         if isinstance(fetch_result, int):
                             continue_at = fetch_result
                             wait_seconds = max(0, continue_at - int(current_time))
-                            print(f"[download_worker-{idx}]: Time limit reached, waiting for {wait_seconds}s")
+                            print(f"[download_worker-{thread_id}]: Time limit reached, waiting for {wait_seconds}s")
                         else:
                             commit_data = fetch_result
                             job_ids.append(job_id)
@@ -438,14 +438,14 @@ def download_worker(request_queue: Queue, response_queue: Queue, stop_event: thr
 
 
             except CommitNotFoundError as e:
-                print(f"[download_worker-{idx}]: Commit not found, still marking as completed:", e)
+                print(f"[download_worker-{thread_id}]: Commit not found, still marking as completed:", e)
                 job_ids.append(job_id)
 
             except Exception as e:
-                print(f"[download_worker-{idx}]: Error in download_worker when fetching commit data:", e)
+                print(f"[download_worker-{thread_id}]: Error in download_worker when fetching commit data:", e)
 
         if stop_event.is_set():
-            print(f"[download_worker-{idx}]: Terminating (stop_event)")
+            print(f"[download_worker-{thread_id}]: Terminating (stop_event)")
 
         request_queue.put(CommitResult(job_ids=job_ids, file_rows=file_rows, commit_rows=commit_rows)) 
         response_queue.task_done()
@@ -470,10 +470,10 @@ def main():
     db_thread.start()
 
     for i in range(num_threads):
-        token_idx = i%4+1
-        idx = i+1
+        token_id = i%4+1
+        thread_id = i+1
 
-        token_name = f"GITHUB_TOKEN_{token_idx}"
+        token_name = f"GITHUB_TOKEN_{token_id}"
         token = os.getenv(token_name)
         if not token:
             raise EnvironmentError(
@@ -484,7 +484,7 @@ def main():
             'request_queue': request_queue,
             'response_queue': response_queue,
             'stop_event': stop_event,
-            'idx': idx,
+            'thread_id': thread_id,
             'token': token
         })
         t.start()
