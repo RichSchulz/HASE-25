@@ -457,11 +457,30 @@ def download_worker(request_queue: Queue, response_queue: Queue, stop_event: thr
         response_queue.task_done()
 
 
+def get_github_tokens():
+    tokens: list[str] = []
+    token_id = 1
+    while True:
+        token_name = f"GITHUB_TOKEN_{token_id}"
+        token = os.getenv(token_name)
+        if token:
+            tokens.append(token)
+            token_id += 1
+        else:
+            if tokens:
+                break
+            else:
+                raise EnvironmentError(
+                    f"{token_name} not set. Specify at least one github token in you .env file as GITHUB_TOKEN_1"
+                )
+
+    return tokens
+
+
 def main():
     load_dotenv(override=True)
 
-    # must match the number of github tokens in env
-    num_threads = 8
+    threads_per_token = 2
 
     stop_event = threading.Event()
     request_queue = Queue()
@@ -475,16 +494,13 @@ def main():
     })
     db_thread.start()
 
-    for i in range(num_threads):
-        token_id = i%4+1
-        thread_id = i+1
+    tokens = get_github_tokens()
+    num_tokens = len(tokens)
+    num_threads = num_tokens * threads_per_token
 
-        token_name = f"GITHUB_TOKEN_{token_id}"
-        token = os.getenv(token_name)
-        if not token:
-            raise EnvironmentError(
-                f"{token_name} not set. Please set it in your environment or in a .env file."
-            )
+    for i in range(num_threads):
+        thread_id = i+1
+        token = tokens[i%num_tokens]
 
         t = threading.Thread(target=download_worker, kwargs={
             'request_queue': request_queue,
