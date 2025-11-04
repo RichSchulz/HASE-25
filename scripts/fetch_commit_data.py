@@ -110,24 +110,9 @@ def fetch_commit_data(
         return resp.json()
 
     # Not found
-    if resp.status_code == 403:
+    if resp.status_code in (404, 409, 422):
         raise CommitNotFoundError(
-            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 403): {resp.text}."
-        )
-    
-    if resp.status_code == 404:
-        raise CommitNotFoundError(
-            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 404): {resp.text}."
-        )
-    
-    if resp.status_code == 409:
-        raise CommitNotFoundError(
-            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 409): {resp.text}."
-        )
-    
-    if resp.status_code == 422:
-        raise CommitNotFoundError(
-            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP 422): {resp.text}."
+            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP {resp.status_code}): {resp.text}."
         )
 
     # Authentication or rate limit issues
@@ -143,8 +128,8 @@ def fetch_commit_data(
                 raise RuntimeError("Rate limit exceeded (403).")
 
         # Otherwise, include response body for debugging
-        raise RuntimeError(
-            f"Authentication or permission error (HTTP {resp.status_code}): {resp.text}"
+        raise CommitNotFoundError(
+            f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP {resp.status_code}): {resp.text}."
         )
 
     # Other HTTP error
