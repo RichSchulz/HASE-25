@@ -110,7 +110,7 @@ def fetch_commit_data(
         return resp.json()
 
     # Not found
-    if resp.status_code in (404, 409, 422):
+    if resp.status_code in (404, 409, 422, 451,):
         raise CommitNotFoundError(
             f"Error loading commit '{commit_sha}' at '{repository_full_name}' (HTTP {resp.status_code}): {resp.text}."
         )
