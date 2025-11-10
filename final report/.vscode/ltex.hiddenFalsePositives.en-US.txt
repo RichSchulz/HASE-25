@@ -1,0 +1,3 @@
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\Q\\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q ETH Zurich Zurich Switzerland\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\QSimon Schuhmacher [1] \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q University of Zurich Zurich Switzerland\\E$"}
+{"rule":"HYPOTHESIS_TYPOGRAPHY","sentence":"^\\QExtension & Analysis: Second, we apply the validated model to our new dependent variables (Code Volume and Code Churn) to test hypotheses H1 and H2.\\E$"}
