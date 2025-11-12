@@ -16,10 +16,59 @@
 
 %%
 %% If your work has an appendix, this is the place to put it.
-% \appendix
+\appendix
 
-% \section{Research Methods}
+\section{Ban Circumvention Analysis}
 
-% \subsection{Part One}
+This appendix presents the difference-in-differences analysis of search volume for circumvention tools---specifically VPN services and Tor Browser---in Italy (treatment group) compared to Austria and Germany (control groups) before and after the ban implementation on April 1st, 2023. The data was obtained from Google Trends~\cite{googletrends}, which provides normalized search interest values representing the share of web searches for a given term relative to all searches on Google over time. The values are normalized on a scale of 0--100, where 100 represents peak popularity for the term during the selected time period.
 
-% Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi malesuada, quam in pulvinar varius, metus nunc fermentum urna, id sollicitudin purus odio sit amet enim. Aliquam ullamcorper eu ipsum vel mollis. Curabitur quis dictum nisl. Phasellus vel semper risus, et lacinia dolor. Integer ultricies commodo sem nec semper.
+Figure~\ref{fig:vpn-timeseries} shows the VPN search volume over time for Italy, Austria, and Germany. The vertical dashed line indicates the ban start date (April 1st, 2023). Prior to the ban, Italy showed consistently lower baseline search interest in VPNs compared to the control countries, with average values around 21 points versus 33--35 points for Austria and Germany. Following the ban implementation, Italy experienced a dramatic spike in VPN search interest, reaching a peak of 100 (the maximum normalized value) on April 1st, and maintaining elevated levels throughout the post-ban period with an average of 51 points.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{../Google Search DiD/did_vpn_timeseries_plot.png}
+\caption{VPN Search Volume Over Time}
+\label{fig:vpn-timeseries}
+\end{figure}
+
+Figure~\ref{fig:vpn-before-after} compares the average VPN search volume before and after the ban implementation across the three countries. The visualization clearly demonstrates the substantial increase in VPN search interest in Italy following the ban, while the control countries (Austria and Germany) showed minimal changes, consistent with the parallel trends assumption required for difference-in-differences estimation.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{../Google Search DiD/did_vpn_before_after_plot.png}
+\caption{Average VPN Search Volume: Before vs After Ban}
+\label{fig:vpn-before-after}
+\end{figure}
+
+Table~\ref{tab:circumvention-regression} presents the difference-in-differences regression results for both VPN and Tor Browser searches. The dependent variable in each model is search volume (normalized Google Trends index). The coefficient on ``Italy × Post-Ban'' represents the treatment effect for each circumvention tool. For VPN searches, the coefficient indicates that searches in Italy increased by 28.6 points (on the 0--100 scale) more than in the control countries after the ban implementation, an effect that is statistically significant at the 1\% level ($p < 0.001$). For Tor Browser searches, the treatment effect is 20.2 points, statistically significant at the 5\% level ($p < 0.05$). These results suggest a substantial increase in interest in both VPN services and Tor Browser as means of circumventing the ban. The magnitude of the VPN effect represents more than a doubling of baseline search interest in Italy, consistent with users seeking tools to bypass geographic restrictions.
+
+\begin{table}[htbp]
+\centering
+\caption{Difference-in-Differences Regression Results}
+\label{tab:circumvention-regression}
+\begin{tabular}{@{\extracolsep{5pt}}lcc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+& \multicolumn{2}{c}{\textit{Dependent variable: search\_volume}} \
+\cr \cline{2-3}
+\\[-1.8ex] & \multicolumn{1}{c}{VPN} & \multicolumn{1}{c}{Tor Browser}  \\
+\hline \\[-1.8ex]
+ Italy & -12.100$^{***}$ & -10.167$^{}$ \\
+& (2.823) & (6.221) \\
+ Post-Ban & 1.267$^{}$ & -0.710$^{}$ \\
+& (2.346) & (5.169) \\
+ Italy × Post-Ban & 28.600$^{***}$ & 20.167$^{**}$ \\
+& (4.063) & (8.953) \\
+ Constant & 33.233$^{***}$ & 17.567$^{***}$ \\
+& (1.630) & (3.592) \\
+\hline \\[-1.8ex]
+ Observations & 87 & 87 \\
+ $R^2$ & 0.497 & 0.079 \\
+ Adjusted $R^2$ & 0.479 & 0.046 \\
+ Residual Std. Error & 8.928 (df=83) & 19.672 (df=83) \\
+ F Statistic & 27.344$^{***}$ (df=3; 83) & 2.371$^{*}$ (df=3; 83) \\
+\hline
+\hline \\[-1.8ex]
+\textit{Note:} & \multicolumn{2}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+\end{tabular}
+\end{table}
