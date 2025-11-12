@@ -30,7 +30,7 @@ def read_and_merge_dfs() -> pd.DataFrame:
     merged: pd.DataFrame | None = None
     for country in countries:
         country_df = csv_to_df(
-            f"data/release_all_{country}.csv",
+            f"large_data/events_all_{country}.csv",
             {
                 "country": country,
             }
@@ -70,12 +70,26 @@ def prepare_did_variables(df: pd.DataFrame):
     }
     dates = list(tau_date_mapping.values())
 
+    output_events = [
+        "PushEvent",
+        "PullRequestEvent",
+        "PullRequestReviewCommentEvent",
+        "CommitCommentEvent",
+        "CreateEvent",
+        "IssuesEvent"
+    ]
+
+    user_events = [
+        "ReleaseEvent",
+        "PushEvent"
+    ]
+
+    # df = cast(pd.DataFrame, df[df["event_type"].isin(user_events)])
+    df = cast(pd.DataFrame, df[df["event_type"] == "ReleaseEvent"])
+
     df = cast(pd.DataFrame, df[df["event_date"].isin(dates)])
 
-    df = cast(pd.DataFrame, (
-        df.groupby(["username", "event_date"], as_index=False)
-        .agg({"release_id": "first", "country": "first", "organization_id": "first"})
-    ))
+    # df = cast(pd.DataFrame, df[df["organization_id"].notnull()])
 
     user_country = df.drop_duplicates("username")[["username", "country"]]
     country_map = dict(zip(user_country["username"], user_country["country"]))
@@ -91,10 +105,17 @@ def prepare_did_variables(df: pd.DataFrame):
         .to_frame(index=False)
     )
 
+    df = cast(pd.DataFrame, df[df["event_type"] == "ReleaseEvent"])
+
+    df = cast(pd.DataFrame, (
+        df.groupby(["username", "event_date"], as_index=False)
+        .agg({"release_id": "first", "country": "first", "organization_id": "first"})
+    ))
+
     df = user_days.merge(df, on=["username", "event_date"], how="left")
 
     df["country"] = df["country"].fillna(df["username"].map(country_map)) # type: ignore
-    df["organization_id"] = df["organization_id"].fillna(df["username"].map(origanization_id_map)) # type: ignore
+    # df["organization_id"] = df["organization_id"].fillna(df["username"].map(origanization_id_map)) # type: ignore
 
     df["Y"] = df["release_id"].notna().astype(int)
 
@@ -171,9 +192,13 @@ def main():
 
     # smf is ot able to handle timezones, thus remove it
     df["event_date"] = df["event_date"].dt.tz_localize(None)
+
+    # df = df = df[df["Y"] == 1]
     
     # filter to only include users with organizatino
     # df = cast(pd.DataFrame, df[df["organization_id"].notnull()])
+
+    print(f"Amount of users: {df["username"].nunique()}")
 
     df.to_csv("data/did_release_events.csv", index=False)
 
