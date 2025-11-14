@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.10.20)  12 NOV 2025 22:31
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.10.20)  14 NOV 2025 17:42
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -992,6 +992,9 @@ LaTeX Font Info:    Font shape `U/ntxexa/m/n' will be
 
 
 [2.2]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
 
 
 Package fancyhdr Warning: \headheight is too small (13.0pt): 
@@ -1000,7 +1003,41 @@ Package fancyhdr Warning: \headheight is too small (13.0pt):
 (fancyhdr)                You might also make \topmargin smaller:
 (fancyhdr)                \addtolength{\topmargin}{-7.48303pt}.
 
-[3.3]) (./parts/02-back.tex (./report.bbl
+[3.3] (./parts/did_regression_table.tex
+LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
+(Font)              scaled to size 8.0pt on input line 2.
+LaTeX Font Info:    Font shape `TS1/LinuxLibertineT-TLF/m/n' will be
+(Font)              scaled to size 9.0pt on input line 13.
+LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/it' will be
+(Font)              scaled to size 9.0pt on input line 25.
+
+Overfull \hbox (67.02171pt too wide) in paragraph at lines 4--27
+ [][] 
+ []
+
+)
+
+[4.4{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc}]
+LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/it' will be
+(Font)              scaled to size 9.0pt on input line 87.
+ (./parts/ban_lift_regression_table.tex
+Overfull \hbox (67.02171pt too wide) in paragraph at lines 4--27
+ [][] 
+ []
+
+)) (./parts/02-back.tex (./report.bbl
+Underfull \vbox (badness 2158) has occurred while \output is active []
+
+
+
+
+Package fancyhdr Warning: \headheight is too small (13.0pt): 
+(fancyhdr)                Make it at least 20.48303pt, for example:
+(fancyhdr)                \setlength{\headheight}{20.48303pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-7.48303pt}.
+
+[5.5{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}]
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/it' will be
 (Font)              scaled to size 7.0pt on input line 56.
 LaTeX Info: Redefining \tempurl on input line 61.
@@ -1015,23 +1052,21 @@ LaTeX Info: Redefining \tempurl on input line 163.
 LaTeX Info: Redefining \tempurl on input line 175.
 LaTeX Info: Redefining \tempurl on input line 187.
 )
-Underfull \vbox (badness 10000) has occurred while \output is active []
+Underfull \vbox (badness 4595) has occurred while \output is active []
 
 
 
-[4.4{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}]
-<../Google Search DiD/did_vpn_timeseries_plot.png, id=117, 859.7721pt x 425.9112pt>
+[6.6]
+<../Google Search DiD/did_vpn_timeseries_plot.png, id=138, 859.7721pt x 425.9112pt>
 File: ../Google Search DiD/did_vpn_timeseries_plot.png Graphic file (type png)
 <use ../Google Search DiD/did_vpn_timeseries_plot.png>
 Package pdftex.def Info: ../Google Search DiD/did_vpn_timeseries_plot.png  used on input line 29.
 (pdftex.def)             Requested size: 387.00153pt x 191.71025pt.
-LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
-(Font)              scaled to size 8.0pt on input line 30.
 
 
 Class acmart Warning: A possible image without description on input line 32.
 
-<../Google Search DiD/did_vpn_before_after_plot.png, id=120, 715.473pt x 426.1521pt>
+<../Google Search DiD/did_vpn_before_after_plot.png, id=141, 715.473pt x 426.1521pt>
 File: ../Google Search DiD/did_vpn_before_after_plot.png Graphic file (type png)
 <use ../Google Search DiD/did_vpn_before_after_plot.png>
 Package pdftex.def Info: ../Google Search DiD/did_vpn_before_after_plot.png  used on input line 38.
@@ -1039,10 +1074,6 @@ Package pdftex.def Info: ../Google Search DiD/did_vpn_before_after_plot.png  use
 
 Class acmart Warning: A possible image without description on input line 41.
 
-LaTeX Font Info:    Font shape `TS1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 9.0pt on input line 43.
-LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/it' will be
-(Font)              scaled to size 9.0pt on input line 52.
 
 
 
@@ -1052,7 +1083,7 @@ Package fancyhdr Warning: \headheight is too small (13.0pt):
 (fancyhdr)                You might also make \topmargin smaller:
 (fancyhdr)                \addtolength{\topmargin}{-7.48303pt}.
 
-[5.5{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc} <../Google Search DiD/did_vpn_timeseries_plot.png>])
+[7.7 <../Google Search DiD/did_vpn_timeseries_plot.png>])
 
 Class acmart Warning: Some images may lack descriptions.
 (acmart)              ACM is committed to complying with the upcoming US ADA https://accessiblyapp.com/accessibility-compliance/ada/ and European Accessibility Act (EAA) https://accessiblyapp.com/accessibility-compliance/eaa/ regulations by actively working to ensure our publications and application services are accessible to individuals with disabilities, adhering to the WCAG guidelines to provide a seamless experience for all users, and regularly reviewing our accessibility practices to maintain compliance with evolving standards. 
@@ -1070,27 +1101,27 @@ Class acmart Warning: CCS concepts are mandatory for papers over two pages.
 File: se-pdfdoc.def 2019/11/29 v1.12 stringenc: PDFDocEncoding
 ) (/usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-utf8.def
 File: se-utf8.def 2019/11/29 v1.12 stringenc: UTF-8
-) [6.6 <../Google Search DiD/did_vpn_before_after_plot.png>] (./report.aux)
+) [8.8 <../Google Search DiD/did_vpn_before_after_plot.png>] (./report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 40E60BC7E64BC569F8CCF8BA6DEBC9B7;288.
+(rerunfilecheck)             Checksum: 31C839F4D2B31DFB5B55F9AD38DF41D8;288.
  ) 
 Here is how much of TeX's memory you used:
- 21915 strings out of 473190
- 356876 string characters out of 5715799
- 831522 words of memory out of 5000000
- 44219 multiletter control sequences out of 15000+600000
- 723679 words of font info for 359 fonts, out of 8000000 for 9000
+ 21968 strings out of 473190
+ 358280 string characters out of 5715799
+ 836824 words of memory out of 5000000
+ 44234 multiletter control sequences out of 15000+600000
+ 731218 words of font info for 375 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
- 90i,16n,131p,1219b,652s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on report.pdf (6 pages, 762708 bytes).
+ 90i,17n,131p,1219b,738s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTI.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
+Output written on report.pdf (8 pages, 801810 bytes).
 PDF statistics:
- 200 PDF objects out of 1000 (max. 8388607)
- 161 compressed objects within 2 object streams
- 38 named destinations out of 1000 (max. 500000)
- 98347 words of extra memory for PDF output out of 106986 (max. 10000000)
+ 224 PDF objects out of 1000 (max. 8388607)
+ 181 compressed objects within 2 object streams
+ 45 named destinations out of 1000 (max. 500000)
+ 102443 words of extra memory for PDF output out of 106986 (max. 10000000)
 

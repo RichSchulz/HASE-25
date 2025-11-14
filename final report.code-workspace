@@ -7,6 +7,7 @@
   "settings": {
     "editor.wordWrap": "on",
     "latex-workshop.latex.outDir": "%DIR%/out",
+    "latex-workshop.formatting.latex": "latexindent",
     "latex-workshop.latex.tools": [
       {
         "name": "latexmk",
@@ -26,6 +27,7 @@
       }
     ],
     "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false,
+    "latex-workshop.latex.autoBuild.run": "onSave",
     "ltex.language": "en-US",
     "ltex.latex.environments": {
       "lstlisting": "ignore",
@@ -35,7 +37,7 @@
     "ltex.latex.commands": {
       "\\MakeOuterQuote{}": "dummy"
     },
-    "latex-workshop.latex.search.rootFiles.include": ["**/proposal.tex"]
+    "latex-workshop.latex.search.rootFiles.include": ["**/report.tex", "**/proposal.tex"]
   },
   "extensions": {
     "recommendations": [

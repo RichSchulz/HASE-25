@@ -53,7 +53,9 @@ We follow Kreitmeir and Raschky \cite{Kreitmeir2023} in selecting Austria and Fr
 
 \subsection*{Research Design}
 
-We employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design to ensure causal inference, replicating the framework from the original paper. The analysis compares the change in developer metrics in Italy (treatment group) against those in Austria and France (control group). We collect and analyze data from before, during, and after the ban period. This design allows us to address the research questions (RQ1 and RQ2) by examining whether the ban caused statistically significant changes in code volume and bug-related issue creation.
+We employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design to ensure causal inference, replicating the framework from the original paper. The analysis compares the change in developer metrics in Italy (treatment group) against those in Austria and France (control group). 
+
+The ban was implemented on April 1st, 2023. Our analysis focuses on a time window spanning four weeks before the ban (March 4--31, 2023) and two weeks after the ban (April 1--14, 2023). This time window allows us to capture both the immediate impact of the ban and potential adaptation effects. Additionally, following Kreitmeir and Raschky \cite{Kreitmeir2023}, we examine the first four working days after the ban (April 3--6, 2023) separately to assess the immediate impact before circumvention behavior (such as VPN usage, as documented in the appendix) may have mitigated the ban's effects over time. This design allows us to address the research questions (RQ1 and RQ2) by examining whether the ban caused statistically significant changes in code volume and bug-related issue creation.
 
 In contrast to the original study—which measured aggregate productivity through project releases—our analysis zooms in on code-level and issue-level metrics that capture the day-to-day development process. The main dependent variables are:
 
@@ -65,6 +67,32 @@ In contrast to the original study—which measured aggregate productivity throug
 All variables will be standardized at the developer-day level to account for individual differences in coding activity. Control variables will include developer experience (tenure on GitHub), project size, and temporal trends (day-of-week effects).
 
 \section*{Results}
+
+\subsection*{Code Volume Analysis}
+
+We begin by examining the impact of the ChatGPT ban on developers' coding activity, as measured by lines of code (LOC) added and deleted per developer per day. Table~\ref{tab:did-loc} presents the difference-in-differences regression results for both the two-week post-ban period and the first four working days after the ban implementation.
+
+\input{parts/did_regression_table}
+
+The coefficient on ``Italy × Post-Ban'' represents the treatment effect of the ban on coding activity in Italy relative to the control countries. For lines of code \textbf{added}, we find statistically significant negative effects in both time periods. Over the two-week post-ban period, developers in Italy added approximately 6,220 fewer lines of code per day compared to the control group, an effect that is statistically significant at the 5\% level ($p < 0.05$). The effect is even more pronounced in the immediate aftermath: during the first four working days after the ban, the reduction in LOC added increases to approximately 8,530 lines per day, significant at the 10\% level ($p < 0.10$).
+
+This pattern suggests that the ban had an immediate and substantial impact on developers' ability or willingness to write new code, with the effect being strongest in the first few days following the ban implementation. The larger magnitude in the four-weekday period compared to the two-week period is consistent with potential adaptation or circumvention behavior over time, as developers may have found alternative ways to access ChatGPT or adjusted their workflows.
+
+In contrast, we find no statistically significant effects on lines of code \textbf{deleted} in either time period. The coefficients are small in magnitude and not statistically significant, suggesting that the ban did not substantially affect developers' code deletion behavior. This asymmetry—significant effects on code addition but not deletion—indicates that the ban primarily impacted developers' ability to generate new code rather than their code maintenance or refactoring activities.
+
+These results provide initial evidence addressing RQ1, indicating that the ChatGPT ban caused a statistically significant reduction in the daily volume of code contributed by developers in Italy, specifically through reduced code addition rather than changes in code deletion patterns.
+
+\subsubsection*{Ban Lift Analysis}
+
+To further examine the causal relationship, we analyze the period following the ban's lift on April 28th, 2023. Table~\ref{tab:did-lift} presents difference-in-differences estimates comparing coding activity before and after the ban was lifted. The coefficient on ``Italy × Post-Lift'' represents whether developers in Italy experienced a rebound in coding activity relative to the control countries once ChatGPT access was restored.
+
+\input{parts/ban_lift_regression_table}
+
+We find no statistically significant effects in any of the specifications. The coefficients on ``Italy × Post-Lift'' are small in magnitude and not statistically significant for both LOC added and deleted, across both the two-week and four-weekday time windows. This null result suggests that either (1) developers had already adapted their workflows during the ban period, (2) the reduction in coding activity persisted despite the ban being lifted, or (3) any recovery effects were gradual and not captured in the immediate post-lift period. The absence of a rebound effect provides additional context for interpreting the ban's impact, indicating that the disruption had lasting effects that did not immediately reverse upon restoration of access.
+
+\subsection*{Code Quality Indicators}
+
+[Analysis of bug-related issue creation to be completed]
 
 \section*{Discussion}
 
