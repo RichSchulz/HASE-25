@@ -8,6 +8,10 @@
 
 ![Mean Issue Body Length per Week by Country](data/mean_issue_length.png)
 
+## Release Events (DiD)
+
+![](data/did_release_events.png)
+
 ## Commit size analysis
 
 ### Data Summary
