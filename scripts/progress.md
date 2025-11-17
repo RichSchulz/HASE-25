@@ -1,5 +1,13 @@
 # Progress Report: ChatGPT Ban Impact Analysis
 
+## Bug Related Issues Analysis
+
+![Ratio of Bug-related Issues Over Time by Country](data/bug_issues_ratio.png)
+
+## Issue Lenth Analysis
+
+![Mean Issue Body Length per Week by Country](data/mean_issue_length.png)
+
 ## Commit size analysis
 
 ### Data Summary
@@ -14,6 +22,8 @@
 
 #### Average Lines Added per Developer per Day
 
+> TODO: Should we maybe filter developers here, only including them if they have a certain activity in the time window (like done in other papers)?
+
 ![Lines Added Before and After Ban](data/lines_added_before_after_plot.png)
 
 **Summary Statistics:**
@@ -26,6 +36,8 @@
   - After ban: Mean = 21,399.11 lines/day (increase)
 
 ### Average Commits per Developer per Day
+
+> TODO: Should we maybe filter developers here, only including them if they have a certain activity in the time window (like done in other papers)?
 
 ![Commits Before and After Ban](data/commits_before_after_plot.png)
 

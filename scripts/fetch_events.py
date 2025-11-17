@@ -29,6 +29,21 @@ def create_bigquery_query(user_table_id: str, start_date: str, end_date: str) ->
             JSON_VALUE(payload, "$.distinct_size") AS distinct_commits,
             JSON_VALUE(payload, "$.head") AS head_commit_sha,
             JSON_VALUE(payload, "$.before") AS before_commit_sha,
+            JSON_VALUE(payload, "$.action") AS action,
+            JSON_VALUE(payload, "$.issue.number") AS issue_number,
+            JSON_VALUE(payload, "$.issue.title") AS issue_title,
+            JSON_VALUE(payload, "$.issue.body") AS issue_body,
+            ARRAY(
+                SELECT JSON_VALUE(label, "$.name")
+                FROM UNNEST(JSON_EXTRACT_ARRAY(payload, "$.issue.labels")) AS label
+            ) AS issue_label,
+            JSON_VALUE(payload, "$.pull_request.number") AS pr_number,
+            JSON_VALUE(payload, "$.pull_request.title") AS pr_title,
+            JSON_VALUE(payload, "$.pull_request.body") AS pr_body,
+            ARRAY(
+                SELECT JSON_VALUE(label, "$.name")
+                FROM UNNEST(JSON_EXTRACT_ARRAY(payload, "$.pull_request.labels")) AS label
+            ) AS pr_label
         FROM
             `githubarchive.day.20*`
         INNER JOIN
@@ -52,6 +67,15 @@ def create_bigquery_query(user_table_id: str, start_date: str, end_date: str) ->
         JSON_VALUE(commit, "$.message") AS commit_message,
         JSON_VALUE(commit, "$.author.name") AS commit_author_name,
         JSON_VALUE(commit, "$.author.email") AS commit_author_email,
+        action,
+        issue_number,
+        issue_title,
+        issue_body,
+        ARRAY_TO_STRING(issue_label, ',') AS issue_labels,
+        pr_number,
+        pr_title,
+        pr_body,
+        ARRAY_TO_STRING(pr_label, ',') AS pr_labels,
     FROM
         events
     LEFT JOIN
@@ -104,12 +128,11 @@ def main():
         print("👋 bye")
         return
 
-    target_date = datetime(2023, 3, 27)
-    start_date = datetime(2023, 3, 30)
-    end_date = datetime(2023, 4, 6)
+    start_date = datetime(2023, 1, 1)
+    #end_date = datetime(2023, 1, 2)
+    end_date = datetime(2023, 6, 30)
 
     print(f"Fetching events from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    print(f"Target date: {target_date.strftime('%Y-%m-%d')}")
     
     try:
         country = "italy" # Change as needed
@@ -117,7 +140,7 @@ def main():
         csv_file = f"events_all_{country}.csv"
 
         user_table_id = f"hase-25-project.users.{country}" 
-        
+
         print("Initializing BigQuery client...")
         client = bigquery.Client()
         
