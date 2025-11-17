@@ -141,7 +141,7 @@ def plot_did(df: pd.DataFrame):
         cov_kwds={"groups": df["username"]}  # cluster by user ID
     )
 
-    print(model.summary())
+    print("Model calculation complete.")
 
     results = model.params
     ses = model.bse
@@ -183,7 +183,7 @@ def plot_did(df: pd.DataFrame):
     ax.set_xticks(sorted(beta_df["tau"].unique()))
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig("data/did_release_events.png")
 
 
 def main():
