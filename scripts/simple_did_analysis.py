@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """
-Simplified Difference-in-Differences Analysis
+Difference-in-Differences Analysis (Kreitmeir & Raschky 2024 Baseline Specification)
 Analyzes commit activity changes after April 1st, 2023, with Italy as treatment group
-and Austria/France as control groups. Includes day-of-week controls, time trends,
-and clustered standard errors by user.
+and Austria/France as control groups.
+
+Baseline Specification includes:
+- User Fixed Effects (α_i): Controls for time-invariant user characteristics
+- Date Fixed Effects (λ_t): Controls for daily fluctuations affecting all users
+- Day-of-Week Fixed Effects: Controls for weekly patterns
+- Group-Specific Linear Time Trends (treatment × continuous_time): Allows different linear trajectories
+- Clustered standard errors at User level
 """
 
 import pandas as pd
@@ -194,7 +200,15 @@ def prepare_did_variables(df, treatment_period='two_weeks', pre_period_weeks=4):
 
 def run_did_regression(df, outcome_var, outcome_name):
     """
-    Run a single DiD regression and return the model with clustered standard errors
+    Run a single DiD regression following Kreitmeir & Raschky (2024) baseline specification
+    and return the model with clustered standard errors
+    
+    Baseline Specification includes:
+    - User Fixed Effects (α_i)
+    - Date Fixed Effects (λ_t)
+    - Day-of-Week Fixed Effects
+    - Group-Specific Linear Time Trends (treatment × continuous_time)
+    - Clustered standard errors at User level
     
     Parameters:
     -----------
@@ -211,9 +225,14 @@ def run_did_regression(df, outcome_var, outcome_name):
         Fitted model with clustered standard errors
     """
     print(f"\nRunning regression for: {outcome_name}")
+    print("Specification: User FE + Date FE + DOW FE + Group-Specific Time Trends")
     
-    # DiD regression with day-of-week controls
-    formula = f"{outcome_var} ~ treatment + post_treatment + treatment_post + C(day_of_week)"
+    # Baseline specification from Kreitmeir & Raschky (2024)
+    # With User FE and Date FE, main effects of treatment and post_treatment are absorbed
+    # We only need the interaction term (treatment_post) and group-specific time trend
+    formula = (f"{outcome_var} ~ treatment_post + "
+               f"C(username) + C(date) + C(day_of_week) + "
+               f"treatment:days_since_start")
     
     try:
         model = ols(formula, data=df).fit()
@@ -222,14 +241,12 @@ def run_did_regression(df, outcome_var, outcome_name):
         if hasattr(model, 'condition_number'):
             cond_num = model.condition_number
             if cond_num > 1e10:
-                print(f"Warning: High condition number ({cond_num:.2e}), trying simpler model...")
-                formula = f"{outcome_var} ~ treatment + post_treatment + treatment_post"
-                model = ols(formula, data=df).fit()
+                print(f"Warning: High condition number ({cond_num:.2e})")
+                print("This may indicate issues with the fixed effects specification")
     except Exception as e:
         print(f"Error fitting model: {e}")
-        print("Trying simplest possible specification...")
-        formula = f"{outcome_var} ~ treatment + post_treatment + treatment_post"
-        model = ols(formula, data=df).fit()
+        print("This may be due to computational limitations with many fixed effects")
+        raise
     
     # Get clustered standard errors by user
     user_groups = df['username'].values
@@ -253,9 +270,20 @@ def run_did_regression(df, outcome_var, outcome_name):
     return model_clustered
 
 def difference_in_differences_analysis(df):
-    """Perform difference-in-differences regression analysis with clustered standard errors"""
+    """
+    Perform difference-in-differences regression analysis following 
+    Kreitmeir & Raschky (2024) baseline specification with clustered standard errors
+    
+    Baseline Specification includes:
+    - User Fixed Effects (α_i)
+    - Date Fixed Effects (λ_t)
+    - Day-of-Week Fixed Effects
+    - Group-Specific Linear Time Trends (treatment × continuous_time)
+    - Clustered standard errors at User level
+    """
     print("\n" + "="*80)
     print("DIFFERENCE-IN-DIFFERENCES REGRESSION ANALYSIS")
+    print("(Kreitmeir & Raschky 2024 Baseline Specification)")
     print("(Analyzing commits and code changes per user per day)")
     print("(Standard errors clustered by user)")
     print("="*80)
@@ -273,10 +301,12 @@ def difference_in_differences_analysis(df):
         print(f"OUTCOME: {outcome_name}")
         print(f"{'-'*60}")
         
-        # DiD regression - try simplest specification first
-        # The issue is likely that week_of_year and month are highly correlated with post_treatment
-        # Start with basic DiD specification
-        formula = f"{outcome_var} ~ treatment + post_treatment + treatment_post + C(day_of_week)"
+        # Baseline specification from Kreitmeir & Raschky (2024)
+        # With User FE and Date FE, main effects of treatment and post_treatment are absorbed
+        # We only need the interaction term (treatment_post) and group-specific time trend
+        formula = (f"{outcome_var} ~ treatment_post + "
+                   f"C(username) + C(date) + C(day_of_week) + "
+                   f"treatment:days_since_start")
         
         try:
             model = ols(formula, data=df).fit()
@@ -285,23 +315,12 @@ def difference_in_differences_analysis(df):
             if hasattr(model, 'condition_number'):
                 cond_num = model.condition_number
                 if cond_num > 1e10:
-                    print(f"Warning: High condition number ({cond_num:.2e}) suggests multicollinearity")
-                    print("Trying simpler model without day_of_week controls...")
-                    # Try even simpler model
-                    formula = f"{outcome_var} ~ treatment + post_treatment + treatment_post"
-                    model = ols(formula, data=df).fit()
-                    if hasattr(model, 'condition_number'):
-                        cond_num = model.condition_number
-                        if cond_num > 1e10:
-                            print(f"Warning: Still high condition number ({cond_num:.2e})")
-                            print("This may indicate issues with the data structure")
-                        else:
-                            print(f"Simpler model has acceptable condition number ({cond_num:.2e})")
+                    print(f"Warning: High condition number ({cond_num:.2e})")
+                    print("This may indicate issues with the fixed effects specification")
         except Exception as e:
             print(f"Error fitting model: {e}")
-            print("Trying simplest possible specification...")
-            formula = f"{outcome_var} ~ treatment + post_treatment + treatment_post"
-            model = ols(formula, data=df).fit()
+            print("This may be due to computational limitations with many fixed effects")
+            raise
         
         # Get clustered standard errors by user
         # Create user group indices for clustering
@@ -328,6 +347,7 @@ def difference_in_differences_analysis(df):
                 model_clustered = model
         
         # Extract key coefficients - coefficients don't change with clustering, only standard errors do
+        # With User FE and Date FE, we only estimate treatment_post and treatment:days_since_start
         # Get parameter names - use params.index if it's a Series, otherwise try to get from model
         if isinstance(model.params, pd.Series):
             param_names = model.params.index
@@ -344,9 +364,16 @@ def difference_in_differences_analysis(df):
                     param_names = list(range(len(model.params)))
             params_series = pd.Series(model.params, index=param_names)
         
-        coef_treatment = params_series['treatment']
-        coef_post = params_series['post_treatment'] 
-        coef_interaction = params_series['treatment_post']
+        # Extract DiD interaction coefficient (main coefficient of interest)
+        coef_interaction = params_series.get('treatment_post', np.nan)
+        
+        # Extract group-specific time trend coefficient
+        # The interaction term might be named 'treatment:days_since_start' or 'treatment:days_since_start[T.1]'
+        time_trend_keys = [k for k in param_names if 'treatment' in str(k) and 'days_since_start' in str(k)]
+        if time_trend_keys:
+            coef_time_trend = params_series.get(time_trend_keys[0], np.nan)
+        else:
+            coef_time_trend = np.nan
         
         # Get standard errors and p-values from clustered model
         # Convert to Series if needed using the same parameter names
@@ -361,16 +388,20 @@ def difference_in_differences_analysis(df):
             pvalues_series = pd.Series(model_clustered.pvalues, index=param_names)
         
         # Extract values, handling NaN cases
-        se_treatment = bse_series.get('treatment', np.nan)
-        se_post = bse_series.get('post_treatment', np.nan)
         se_interaction = bse_series.get('treatment_post', np.nan)
+        if time_trend_keys:
+            se_time_trend = bse_series.get(time_trend_keys[0], np.nan)
+        else:
+            se_time_trend = np.nan
         
-        p_val_treatment = pvalues_series.get('treatment', np.nan)
-        p_val_post = pvalues_series.get('post_treatment', np.nan)
         p_val_interaction = pvalues_series.get('treatment_post', np.nan)
+        if time_trend_keys:
+            p_val_time_trend = pvalues_series.get(time_trend_keys[0], np.nan)
+        else:
+            p_val_time_trend = np.nan
         
         # Check for NaN values and provide diagnostics
-        if np.isnan(se_treatment) or np.isnan(se_post) or np.isnan(se_interaction):
+        if np.isnan(se_interaction) or np.isnan(se_time_trend):
             print("Warning: Some standard errors are NaN. This may indicate:")
             print("  - Perfect multicollinearity in the model")
             print("  - Issues with the clustered covariance matrix")
@@ -390,7 +421,9 @@ def difference_in_differences_analysis(df):
                         print(f"  - Found {inf_count} Inf values in covariance matrix")
                     
                     # Check diagonal elements (variances) for the key variables
-                    key_vars = ['treatment', 'post_treatment', 'treatment_post']
+                    key_vars = ['treatment_post']
+                    if time_trend_keys:
+                        key_vars.extend(time_trend_keys)
                     for var in key_vars:
                         if var in cov_matrix.index:
                             var_val = cov_matrix.loc[var, var]
@@ -413,20 +446,18 @@ def difference_in_differences_analysis(df):
             significance = ""
         
         # Format output, handling NaN values
-        se_treatment_str = f"{se_treatment:.4f}" if not np.isnan(se_treatment) else "NaN"
-        se_post_str = f"{se_post:.4f}" if not np.isnan(se_post) else "NaN"
         se_interaction_str = f"{se_interaction:.4f}" if not np.isnan(se_interaction) else "NaN"
+        se_time_trend_str = f"{se_time_trend:.4f}" if not np.isnan(se_time_trend) else "NaN"
         
-        p_val_treatment_str = f"{p_val_treatment:.4f}" if not np.isnan(p_val_treatment) else "NaN"
-        p_val_post_str = f"{p_val_post:.4f}" if not np.isnan(p_val_post) else "NaN"
         p_val_interaction_str = f"{p_val_interaction:.4f}" if not np.isnan(p_val_interaction) else "NaN"
+        p_val_time_trend_str = f"{p_val_time_trend:.4f}" if not np.isnan(p_val_time_trend) else "NaN"
         
-        print(f"Treatment effect (Italy vs Control): {coef_treatment:.4f} (SE: {se_treatment_str}, p={p_val_treatment_str})")
-        print(f"Time effect (After vs Before): {coef_post:.4f} (SE: {se_post_str}, p={p_val_post_str})")
-        print(f"DiD Effect (treatment_post): {coef_interaction:.4f} (SE: {se_interaction_str}) {significance}")
+        print(f"DiD Effect (Italy × Post-Ban): {coef_interaction:.4f} (SE: {se_interaction_str}) {significance}")
         print(f"P-value for DiD effect: {p_val_interaction_str}")
+        print(f"Group-Specific Time Trend (Italy × Days): {coef_time_trend:.4f} (SE: {se_time_trend_str}, p={p_val_time_trend_str})")
         print(f"Number of clusters (users): {len(unique_users)}")
         print(f"Observations: {len(df)}")
+        print(f"Note: User FE and Date FE are included but coefficients not shown (absorbed)")
 
 def create_latex_table(models_dict, output_path):
     """
@@ -481,15 +512,30 @@ def create_latex_table(models_dict, output_path):
     stargazer = Stargazer(model_list)
     
     # Set covariate order
-    stargazer.covariate_order(['treatment', 'post_treatment', 'treatment_post', 'Intercept'])
+    # Note: With User FE and Date FE, treatment and post_treatment are absorbed
+    # We only show treatment_post (DiD coefficient) and the group-specific time trend
+    stargazer.covariate_order(['treatment_post', 'treatment:days_since_start', 'Intercept'])
     
     # Rename covariates
-    stargazer.rename_covariates({
-        'treatment': 'Italy',
-        'post_treatment': 'Post-Ban',
+    # Note: The time trend interaction might have different naming depending on statsmodels
+    # We'll try to catch common variations
+    rename_dict = {
         'treatment_post': 'Italy × Post-Ban',
         'Intercept': 'Constant'
-    })
+    }
+    
+    # Try to find and rename the time trend term (could be named differently)
+    # Check the first model to see what parameters exist
+    if len(model_list) > 0:
+        first_model = model_list[0]
+        if hasattr(first_model, 'params') and isinstance(first_model.params, pd.Series):
+            param_names = first_model.params.index.tolist()
+            # Look for time trend interaction
+            time_trend_params = [p for p in param_names if 'treatment' in str(p) and 'days_since_start' in str(p)]
+            if time_trend_params:
+                rename_dict[time_trend_params[0]] = 'Italy × Days Since Start'
+    
+    stargazer.rename_covariates(rename_dict)
     
     # Configure table
     stargazer.show_model_numbers(False)
@@ -807,6 +853,17 @@ def main():
                 se_interaction = bse_series.get('treatment_post', np.nan)
                 p_val_interaction = pvalues_series.get('treatment_post', np.nan)
                 
+                # Extract group-specific time trend coefficient
+                time_trend_keys = [k for k in params_series.index if 'treatment' in str(k) and 'days_since_start' in str(k)]
+                if time_trend_keys:
+                    coef_time_trend = params_series.get(time_trend_keys[0], np.nan)
+                    se_time_trend = bse_series.get(time_trend_keys[0], np.nan)
+                    p_val_time_trend = pvalues_series.get(time_trend_keys[0], np.nan)
+                else:
+                    coef_time_trend = np.nan
+                    se_time_trend = np.nan
+                    p_val_time_trend = np.nan
+                
                 # Significance indicators
                 if not np.isnan(p_val_interaction):
                     if p_val_interaction < 0.001:
@@ -822,8 +879,11 @@ def main():
                 
                 print(f"DiD Effect (Italy × Post-Ban): {coef_interaction:.4f} (SE: {se_interaction:.4f}) {significance}")
                 print(f"P-value: {p_val_interaction:.4f}")
+                if not np.isnan(coef_time_trend):
+                    print(f"Group-Specific Time Trend (Italy × Days): {coef_time_trend:.4f} (SE: {se_time_trend:.4f}, p={p_val_time_trend:.4f})")
                 print(f"Observations: {len(df)}")
                 print(f"Number of clusters (users): {df['username'].nunique()}")
+                print(f"Note: User FE, Date FE, and DOW FE included (coefficients absorbed)")
         
         # Create LaTeX table
         output_path = "/Users/richard/University/HASE-25/final report/parts/did_regression_table.tex"
