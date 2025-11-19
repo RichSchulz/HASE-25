@@ -1,16 +1,16 @@
 # Fdb version 4
-["bibtex report"] 1763138537.46433 "report.aux" "report.bbl" "report" 1763138539.69955 0
-  "./report.bib" 1762982064.07392 16514 38aa3dd8705c6f6b6eee2545bf621f63 ""
+["bibtex report"] 1763559730.44133 "report.aux" "report.bbl" "report" 1763559732.62421 0
+  "./report.bib" 1763558006.16586 16881 518c49cbaa2b77e4535ed9434fd37662 ""
   "/usr/local/texlive/2025/texmf-dist/bibtex/bst/acmart/ACM-Reference-Format.bst" 1735764768 90749 48abc1cbed6fafc6fc31528e3aa606ca ""
-  "report.aux" 1763138539.29143 4046 342c4b118cbf332183c9784c54bb1869 "pdflatex"
+  "report.aux" 1763559732.2274 4293 44787e5a787ed4a54dc8358da7d1ab61 "pdflatex"
   (generated)
   "report.bbl"
   "report.blg"
   (rewritten before read)
-["pdflatex"] 1763138537.59616 "/Users/richard/University/HASE-25/final report/report.tex" "report.pdf" "report" 1763138539.6997 0
+["pdflatex"] 1763559730.57408 "/Users/richard/University/HASE-25/final report/report.tex" "report.pdf" "report" 1763559732.62437 0
   "../Google Search DiD/did_vpn_before_after_plot.png" 1762982903.33555 108282 d539f94c1db6002a5f23f212d6821d4e ""
   "../Google Search DiD/did_vpn_timeseries_plot.png" 1762982902.97651 292429 a6c43e792368e273fee8b9871d59bc3b ""
-  "/Users/richard/University/HASE-25/final report/report.tex" 1762807158.72004 204 10bcd14cf3e78cd5c41db3c65ef1e860 ""
+  "/Users/richard/University/HASE-25/final report/report.tex" 1763558783.02315 204 10bcd14cf3e78cd5c41db3c65ef1e860 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc" 1490131464 2921 8ca0eb0831f9bc5da080d3697cfe67bf ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc" 1490131464 2933 9ad527ce78d7c5fa0a642dead095f172 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc" 1490131464 2934 a4a9158faed2e9e89c771b4e3b7fc12f ""
@@ -207,14 +207,14 @@
   "helpers/config.tex" 1762802759.40283 19 57a0bbda643df9db34b25128abc22c6f ""
   "helpers/packages.tex" 1762802759.40309 22 d1573676a8aae09d583f7fa1c8378436 ""
   "parts/00-front.tex" 1762802759.41951 1630 ad9b45b1bef3e25dc25177f0f8188119 ""
-  "parts/01-main.tex" 1763138524.11771 15995 3d9bdc49f58e0e6fc9187845de75bbb6 ""
-  "parts/02-back.tex" 1763138535.10435 4746 efb40cd869dc6ecbac271894665c0d7f ""
+  "parts/01-main.tex" 1763559713.58638 16403 dd54db656e99b1ecf470034b6213a2ac ""
+  "parts/02-back.tex" 1763559728.06428 4777 7a114453066d7ef1d9ea33bf4a79006c ""
   "parts/ban_lift_regression_table.tex" 1763138360.60748 1546 9494d4a3ae03ce8fd201fbffe855318e ""
   "parts/did_regression_table.tex" 1763136519.38246 1545 03dd62f72ad450ac07019cf362c39a2f ""
-  "report.aux" 1763138539.29143 4046 342c4b118cbf332183c9784c54bb1869 "pdflatex"
-  "report.bbl" 1763138537.59268 7841 13a606074c45ab200fa5c6d37b8c24c7 "bibtex report"
-  "report.out" 1763138539.29236 288 31c839f4d2b31dfb5b55f9ad38df41d8 "pdflatex"
-  "report.tex" 1762807158.72004 204 10bcd14cf3e78cd5c41db3c65ef1e860 ""
+  "report.aux" 1763559732.2274 4293 44787e5a787ed4a54dc8358da7d1ab61 "pdflatex"
+  "report.bbl" 1763559730.57037 8287 024fd05e4fd1edc9a6c104e6378e2603 "bibtex report"
+  "report.out" 1763559732.22809 288 31c839f4d2b31dfb5b55f9ad38df41d8 "pdflatex"
+  "report.tex" 1763558783.02315 204 10bcd14cf3e78cd5c41db3c65ef1e860 ""
   (generated)
   "report.aux"
   "report.log"

@@ -1,0 +1,25 @@
+defaultIndent: "    "
+modifyLineBreaks:
+  oneSentencePerLine:
+    manipulateSentences: 0
+  preserveBlankLines: 1
+verbatimCommands:
+  - lstlisting
+  - verbatim
+  - minted
+  - pycode
+  - code
+verbatimEnvironments:
+  - verbatim
+  - lstlisting
+  - minted
+  - pycode
+  - code
+lookForAlignDelims:
+  alignRows:
+    delims:
+      - cmd: "&"
+        alignDoubleBackSlash: 1
+      - cmd: "\\"
+        alignDoubleBackSlash: 1
+
