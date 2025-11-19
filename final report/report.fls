@@ -443,16 +443,24 @@ INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxexa.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/newtx/ntxsy.vf
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txsys.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txex-bar.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ts1.tfm
 INPUT ./parts/did_regression_table.tex
 INPUT ./parts/did_regression_table.tex
 INPUT ./parts/did_regression_table.tex
 INPUT ./parts/did_regression_table.tex
 INPUT parts/did_regression_table.tex
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinBiolinumT-tlf-t1.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ts1.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-ts1.vf
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ts1--base.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinBiolinumTI-tlf-t1.tfm
+INPUT ./parts/did_heterogeneity_table.tex
+INPUT ./parts/did_heterogeneity_table.tex
+INPUT ./parts/did_heterogeneity_table.tex
+INPUT ./parts/did_heterogeneity_table.tex
+INPUT parts/did_heterogeneity_table.tex
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinBiolinumT-tlf-t1.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinBiolinumT-tlf-t1--base.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/newtx/nxlmi.vf
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/LibertineMathMI.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/NewTXMI.tfm
@@ -460,24 +468,24 @@ INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/stxscr.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-ot1.vf
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ot1--base.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinBiolinumTI-tlf-t1.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinBiolinumTI-tlf-t1.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinBiolinumTI-tlf-t1--base.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/newtx/ntxsy7.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txsys.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txex-bar.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineTI-tlf-t1.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1--base.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/newtx/nxlmi7.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/LibertineMathMI7.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/NewTXMI7.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/stxscr.tfm
 INPUT ./parts/ban_lift_regression_table.tex
 INPUT ./parts/ban_lift_regression_table.tex
 INPUT ./parts/ban_lift_regression_table.tex
 INPUT ./parts/ban_lift_regression_table.tex
 INPUT parts/ban_lift_regression_table.tex
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinBiolinumT-tlf-t1.vf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinBiolinumT-tlf-t1--base.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/newtx/ntxsy7.vf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txsys.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txex-bar.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-ot1.vf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ot1--base.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineTI-tlf-t1.vf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1--base.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinBiolinumTI-tlf-t1.vf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinBiolinumTI-tlf-t1--base.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1.tfm
 INPUT ./parts/02-back.tex
 INPUT ./parts/02-back.tex
 INPUT ./parts/02-back.tex
@@ -486,7 +494,6 @@ INPUT parts/02-back.tex
 INPUT ./report.bbl
 INPUT ./report.bbl
 INPUT report.bbl
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineTI-tlf-t1.vf
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1--base.tfm
 INPUT ../Google Search DiD/did_vpn_timeseries_plot.png
@@ -499,12 +506,17 @@ INPUT ../Google Search DiD/did_vpn_before_after_plot.png
 INPUT ../Google Search DiD/did_vpn_before_after_plot.png
 INPUT ../Google Search DiD/did_vpn_before_after_plot.png
 INPUT ../Google Search DiD/did_vpn_before_after_plot.png
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-ot1.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ot1--base.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-utf8.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-utf8.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-utf8.def
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/newtx/ntxsy7.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txsys.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txex-bar.tfm
 INPUT report.aux
 INPUT ./report.out
 INPUT ./report.out
@@ -516,4 +528,5 @@ INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLiberti
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb

@@ -1,27 +1,19 @@
-\begin{table}[!htbp] \centering
-  \caption{Difference-in-Differences Estimates: Lines of Code Changes After ChatGPT Ban Lift}
-  \label{tab:did-lift}
-\begin{tabular}{@{\extracolsep{5pt}}lcccc}
-\\[-1.8ex]\hline
-\hline \\[-1.8ex]
-\\[-1.8ex] & \multicolumn{1}{c}{LOC Added (2 Weeks)} & \multicolumn{1}{c}{LOC Added (4 Weekdays)} & \multicolumn{1}{c}{LOC Deleted (2 Weeks)} & \multicolumn{1}{c}{LOC Deleted (4 Weekdays)}  \\
-\hline \\[-1.8ex]
- Italy & -4086.519$^{}$ & -4010.950$^{}$ & -1077.617$^{}$ & -1231.823$^{}$ \\
-& (5620.952) & (5770.782) & (1337.319) & (1315.548) \\
- Post-Lift & -1055.302$^{}$ & 566.091$^{}$ & 625.877$^{}$ & 1660.161$^{}$ \\
-& (1685.454) & (2932.394) & (1173.611) & (1880.063) \\
- Italy × Post-Lift & 643.460$^{}$ & -2767.974$^{}$ & 258.638$^{}$ & -904.240$^{}$ \\
-& (2735.654) & (3758.932) & (2029.785) & (2714.440) \\
- Constant & 16726.655$^{***}$ & 17113.333$^{***}$ & 6773.386$^{***}$ & 7076.681$^{***}$ \\
-& (4418.021) & (4613.066) & (894.855) & (929.972) \\
-\hline \\[-1.8ex]
- Observations & 209142 & 169574 & 209142 & 169574 \\
- $R^2$ & 0.000 & 0.000 & 0.000 & 0.000 \\
- Adjusted $R^2$ & 0.000 & 0.000 & -0.000 & -0.000 \\
- Residual Std. Error & 378708.112 (df=209132) & 390728.730 (df=169564) & 190160.556 (df=209132) & 197850.531 (df=169564) \\
- F Statistic & 0.616$^{}$ (df=9; 209132) & 0.691$^{}$ (df=9; 169564) & 0.714$^{}$ (df=9; 209132) & 1.561$^{}$ (df=9; 169564) \\
+\begin{table}[htbp]
+\centering
+\caption{Difference-in-Differences Results: Post-Ban Lift (Absorbed Fixed Effects)}
+\label{tab:did-lift}
+\begin{tabular}{lcccc}
+\hline \hline
+ & \multicolumn{2}{c}{Log Additions} & \multicolumn{2}{c}{Log Deletions} \\
+ & 2 Weeks & 4 Weekdays & 2 Weeks & 4 Weekdays \\
 \hline
-\hline \\[-1.8ex]
-\textit{Note:} & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+Italy $\times$ Post-Lift & -0.0321 & -0.0158 & -0.0044 & -0.0585 \\
+ & (0.0494) & (0.0541) & (0.0502) & (0.0547) \\
+\hline
+Observations & 209142 & 169574 & 209142 & 169574 \\
+$R^2$ & 0.436 & 0.457 & 0.430 & 0.451 \\
+User FE & Yes & Yes & Yes & Yes \\
+Date FE & Yes & Yes & Yes & Yes \\
+\hline \hline
 \end{tabular}
 \end{table}

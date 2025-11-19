@@ -1,27 +1,19 @@
-\begin{table}[!htbp] \centering
-  \caption{Difference-in-Differences Estimates: Lines of Code Changes After ChatGPT Ban}
-  \label{tab:did-loc}
-\begin{tabular}{@{\extracolsep{5pt}}lcccc}
-\\[-1.8ex]\hline
-\hline \\[-1.8ex]
-\\[-1.8ex] & \multicolumn{1}{c}{LOC Added (2 Weeks)} & \multicolumn{1}{c}{LOC Added (4 Weekdays)} & \multicolumn{1}{c}{LOC Deleted (2 Weeks)} & \multicolumn{1}{c}{LOC Deleted (4 Weekdays)}  \\
-\hline \\[-1.8ex]
- Italy & -1880.806$^{}$ & -2079.757$^{}$ & -2148.903$^{}$ & -2198.754$^{}$ \\
-& (5419.410) & (5481.783) & (1680.966) & (1613.464) \\
- Post-Ban & 1877.242$^{}$ & 5491.749$^{}$ & -764.124$^{}$ & 645.753$^{}$ \\
-& (2030.811) & (3461.779) & (1381.723) & (1949.744) \\
- Italy × Post-Ban & -6219.835$^{**}$ & -8530.137$^{*}$ & 865.282$^{}$ & -366.177$^{}$ \\
-& (3095.401) & (4401.253) & (2287.457) & (2559.878) \\
- Constant & 18283.484$^{***}$ & 19361.889$^{***}$ & 7296.271$^{***}$ & 6775.601$^{***}$ \\
-& (4242.394) & (4379.965) & (1327.804) & (1338.330) \\
-\hline \\[-1.8ex]
- Observations & 224776 & 185999 & 224776 & 185999 \\
- $R^2$ & 0.000 & 0.000 & 0.000 & 0.000 \\
- Adjusted $R^2$ & 0.000 & 0.000 & -0.000 & 0.000 \\
- Residual Std. Error & 395751.579 (df=224766) & 401965.443 (df=185989) & 184244.846 (df=224766) & 189388.650 (df=185989) \\
- F Statistic & 1.456$^{}$ (df=9; 224766) & 1.709$^{*}$ (df=9; 185989) & 0.471$^{}$ (df=9; 224766) & 1.095$^{}$ (df=9; 185989) \\
+\begin{table}[htbp]
+\centering
+\caption{Difference-in-Differences Results (Absorbed Fixed Effects)}
+\label{tab:did-loc}
+\begin{tabular}{lcccc}
+\hline \hline
+ & \multicolumn{2}{c}{Log Additions} & \multicolumn{2}{c}{Log Deletions} \\
+ & 2 Weeks & 4 Weekdays & 2 Weeks & 4 Weekdays \\
 \hline
-\hline \\[-1.8ex]
-\textit{Note:} & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+Italy $\times$ Post & 0.0177 & 0.0542 & 0.0136 & 0.0326 \\
+ & (0.0486) & (0.0527) & (0.0489) & (0.0524) \\
+\hline
+Observations & 224,776 & 185,999 & 224,776 & 185,999 \\
+$R^2$ & 0.428 & 0.449 & 0.425 & 0.444 \\
+User FE & Yes & Yes & Yes & Yes \\
+Date FE & Yes & Yes & Yes & Yes \\
+\hline \hline
 \end{tabular}
 \end{table}

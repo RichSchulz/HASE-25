@@ -1,73 +1,74 @@
 #!/usr/bin/env python3
 """
-Difference-in-Differences Analysis: Post-Ban Lift
+Difference-in-Differences Analysis: Post-Ban Lift (Optimized)
 Analyzes commit activity changes after the ChatGPT ban was lifted (April 28, 2023),
 comparing activity during the ban with activity after the ban was lifted.
 Italy as treatment group and Austria/France as control groups.
-Includes day-of-week controls and clustered standard errors by user.
+Uses absorbed fixed effects (user and date) with clustered standard errors by user.
 """
 
 import pandas as pd
 import numpy as np
 import sqlite3
-from statsmodels.formula.api import ols
-from scipy import stats as scipy_stats
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import timedelta
 import warnings
+import gc
+
+# OPTIMIZATION: Use linearmodels for efficient Fixed Effects
 try:
-    from stargazer.stargazer import Stargazer
-    # Fix stargazer bug: statsmodels translator is missing pandas import
-    try:
-        import stargazer.translators.statsmodels as stargazer_statsmodels
-        if not hasattr(stargazer_statsmodels, 'pd'):
-            stargazer_statsmodels.pd = pd
-    except (ImportError, AttributeError):
-        pass  # If we can't patch it, try to continue anyway
-    STARGAZER_AVAILABLE = True
+    from linearmodels.iv import AbsorbingLS
+    LINEARMODELS_AVAILABLE = True
 except ImportError:
-    STARGAZER_AVAILABLE = False
-    print("Warning: stargazer not available. Install with: pip install stargazer")
+    LINEARMODELS_AVAILABLE = False
+    print("CRITICAL WARNING: 'linearmodels' not installed.")
+    print("Please run: pip install linearmodels")
+    print("Falling back to slow statsmodels (Script may crash on large data).")
+    from statsmodels.formula.api import ols
+
 warnings.filterwarnings('ignore')
 
-def load_and_prepare_data():
-    """Load and prepare commit data from SQLite database for DiD analysis"""
+def load_and_prepare_data(ban_period_weeks=4):
+    """
+    OPTIMIZATION: Filter by date inside SQL to avoid loading massive history.
+    Ban lift date is 2023-04-28. We need roughly March 1st to May 15th.
+    """
     print("Loading commit data from SQLite database...")
     
-    # Hardcoded path to SQLite database
     db_path = "/Users/richard/University/HASE-25/scripts/data/data_commits.sqlite3"
     
-    # Connect to database and load data
+    # Calculate safe date buffer for SQL (give extra weeks to be safe)
+    # Ban lift date is 2023-04-28. We need roughly March 1st to May 15th.
+    # We filter strictly later in pandas, this is just to save RAM on load.
+    sql_start_date = '2023-02-15' 
+    sql_end_date = '2023-05-20'
+
     conn = sqlite3.connect(db_path)
     
-    # Load all commit data
-    query = """
+    # OPTIMIZATION: WHERE clause added
+    query = f"""
     SELECT 
         country,
-        repository_name,
         username,
-        commit_sha,
-        commit_message,
         push_event_timestamp,
         additions,
         deletions,
-        changes
+        changes,
+        commit_sha
     FROM commit_data
+    WHERE push_event_timestamp BETWEEN '{sql_start_date}' AND '{sql_end_date}'
     """
     
     df = pd.read_sql_query(query, conn)
     conn.close()
     
-    print(f"Total commits loaded: {len(df)}")
-    print(f"Countries: {df['country'].unique()}")
-    print(f"Unique users: {df['username'].nunique()}")
-    
+    print(f"Total commits loaded (filtered by date in SQL): {len(df)}")
     return df
 
 def prepare_did_variables(df, treatment_period='two_weeks', ban_period_weeks=4):
     """
-    Prepare variables for difference-in-differences analysis (post-ban lift)
+    Prepare variables for difference-in-differences analysis (post-ban lift) with memory optimization
     
     Parameters:
     -----------
@@ -81,26 +82,18 @@ def prepare_did_variables(df, treatment_period='two_weeks', ban_period_weeks=4):
     print(f"Preparing DiD variables for treatment period: {treatment_period}...")
     print(f"Using {ban_period_weeks} weeks during ban as pre-period")
     
-    # Convert push_event_timestamp to datetime
+    # Optimize datatypes
     df['event_timestamp'] = pd.to_datetime(df['push_event_timestamp'])
     
-    # Handle missing data - convert to numeric
-    df['additions'] = pd.to_numeric(df['additions'], errors='coerce')
-    df['deletions'] = pd.to_numeric(df['deletions'], errors='coerce')
-    df['changes'] = pd.to_numeric(df['changes'], errors='coerce')
-    
-    # Filter out rows with missing data
-    initial_count = len(df)
-    df = df.dropna(subset=['additions', 'deletions', 'changes', 'username', 'country', 'event_timestamp'])
-    final_count = len(df)
-    print(f"Removed {initial_count - final_count} commits with missing data")
-    print(f"Final dataset: {final_count} commits")
-    
-    # Create date column (without time)
+    # OPTIMIZATION: Use float32 to save 50% RAM on numbers
+    cols = ['additions', 'deletions', 'changes']
+    for c in cols:
+        df[c] = pd.to_numeric(df[c], errors='coerce').astype('float32')
+        
+    df = df.dropna(subset=['additions', 'username', 'country', 'event_timestamp'])
     df['date'] = df['event_timestamp'].dt.date
     
     # Define key dates
-    ban_start = pd.Timestamp('2023-04-01').date()
     ban_end = pd.Timestamp('2023-04-28').date()  # Ban lifted on April 28
     lift_date = pd.Timestamp('2023-04-29').date()  # First day after ban lift
     
@@ -108,42 +101,36 @@ def prepare_did_variables(df, treatment_period='two_weeks', ban_period_weeks=4):
     ban_period_start = ban_end - timedelta(weeks=ban_period_weeks) + timedelta(days=1)
     print(f"Pre-period (during ban): {ban_period_start} to {ban_end} ({ban_period_weeks} weeks during ban)")
     
-    # Filter by treatment period
+    # Filter Logic
     if treatment_period == 'two_weeks':
         # First two weeks after ban lift: April 29 - May 12, 2023
         post_lift_end = lift_date + timedelta(weeks=2)
-        # Keep data from ban period start to end of post-lift period
-        df = df[(df['date'] >= ban_period_start) & (df['date'] < post_lift_end)]
-        print(f"Filtered to {ban_period_weeks} weeks during ban and 2 weeks after lift: {len(df)} commits")
-        print(f"Date range: {ban_period_start} to {post_lift_end - timedelta(days=1)}")
+        mask = (df['date'] >= ban_period_start) & (df['date'] < post_lift_end)
+        print(f"Filtered to {ban_period_weeks} weeks during ban and 2 weeks after lift")
     elif treatment_period == 'four_weekdays':
-        # First 4 weekdays after ban lift: May 1-4, 2023 (April 29 was Saturday, April 30 was Sunday)
+        # First 4 weekdays after ban lift: May 1-4, 2023
         may_5th = pd.Timestamp('2023-05-05').date()
-        # Keep data from ban period start to end of post-lift period
-        df = df[(df['date'] >= ban_period_start) & (df['date'] < may_5th)]
-        print(f"Filtered to {ban_period_weeks} weeks during ban and first 4 weekdays after lift: {len(df)} commits")
-        print(f"Date range: {ban_period_start} to {may_5th - timedelta(days=1)}")
+        mask = (df['date'] >= ban_period_start) & (df['date'] < may_5th)
+        print(f"Filtered to {ban_period_weeks} weeks during ban and first 4 weekdays after lift")
     
-    # Aggregate by user and date
+    df = df[mask].copy()
+    
+    # Aggregate
     print("Aggregating commits by user and date...")
     daily_user_stats = df.groupby(['username', 'country', 'date']).agg({
         'additions': 'sum',
         'deletions': 'sum', 
         'changes': 'sum',
-        'commit_sha': 'count'  # Number of commits per user per day
+        'commit_sha': 'count'
     }).reset_index()
     
     daily_user_stats.rename(columns={'commit_sha': 'commits_count'}, inplace=True)
     
-    print(f"Aggregated to {len(daily_user_stats)} user-day observations")
-    
-    # Create treatment group indicator (Italy = 1, others = 0)
+    # Variables
     daily_user_stats['treatment'] = (daily_user_stats['country'].str.lower() == 'italy').astype(int)
-    
-    # Add date datetime for additional controls
     daily_user_stats['date_dt'] = pd.to_datetime(daily_user_stats['date'])
     
-    # Create post-lift indicator based on treatment period
+    # Post-lift logic
     if treatment_period == 'two_weeks':
         # Post-lift: April 29 - May 12, 2023
         post_lift_end = lift_date + timedelta(weeks=2)
@@ -153,254 +140,185 @@ def prepare_did_variables(df, treatment_period='two_weeks', ban_period_weeks=4):
         # Post-lift: Only May 1-4, 2023 (first 4 weekdays after lift)
         may_1st = pd.Timestamp('2023-05-01').date()
         may_5th = pd.Timestamp('2023-05-05').date()
-        # Only count weekdays (Monday=0, Sunday=6)
         daily_user_stats['is_weekday'] = (daily_user_stats['date_dt'].dt.dayofweek < 5).astype(int)
         daily_user_stats['post_lift'] = ((daily_user_stats['date'] >= may_1st) & 
                                         (daily_user_stats['date'] < may_5th) &
                                         (daily_user_stats['is_weekday'] == 1)).astype(int)
     
-    # Create interaction term (treatment * post_lift)
     daily_user_stats['treatment_post'] = daily_user_stats['treatment'] * daily_user_stats['post_lift']
     
-    # Add day of week controls
-    daily_user_stats['day_of_week'] = daily_user_stats['date_dt'].dt.day_name()
+    # Time Trend
+    min_date = daily_user_stats['date_dt'].min()
+    daily_user_stats['days_since_start'] = (daily_user_stats['date_dt'] - min_date).dt.days
     
-    # Ensure treatment and post_lift are regular int types (not nullable)
-    daily_user_stats['treatment'] = daily_user_stats['treatment'].astype(int)
-    daily_user_stats['post_lift'] = daily_user_stats['post_lift'].astype(int)
-    daily_user_stats['treatment_post'] = daily_user_stats['treatment_post'].astype(int)
+    # Create interaction term explicitly for linearmodels
+    daily_user_stats['treatment_time_trend'] = daily_user_stats['treatment'] * daily_user_stats['days_since_start']
     
-    # Convert all numeric columns to standard numpy types to avoid nullable dtype issues
+    # Log outcomes
     for col in ['additions', 'deletions', 'changes', 'commits_count']:
-        if col in daily_user_stats.columns:
-            daily_user_stats[col] = daily_user_stats[col].astype(float)
+        daily_user_stats[f'log_{col}'] = np.log1p(daily_user_stats[col])
+
+    # Categoricals for efficiency
+    daily_user_stats['username'] = daily_user_stats['username'].astype('category')
+    daily_user_stats['date'] = daily_user_stats['date'].astype('category')
+    
+    print(f"Aggregated to {len(daily_user_stats)} user-day observations")
     
     return daily_user_stats
 
-def run_did_regression(df, outcome_var, outcome_name):
+def run_fast_regression(df, outcome_var, outcome_name):
     """
-    Run a single DiD regression and return the model with clustered standard errors
-    
-    Parameters:
-    -----------
-    df : DataFrame
-        Prepared data with DiD variables
-    outcome_var : str
-        Name of outcome variable (e.g., 'additions', 'deletions')
-    outcome_name : str
-        Human-readable name for the outcome
-    
-    Returns:
-    --------
-    model_clustered : RegressionResults
-        Fitted model with clustered standard errors
+    OPTIMIZATION: Uses linearmodels AbsorbingLS for speed.
+    Absorbs Fixed Effects instead of creating dummy columns.
     """
-    print(f"\nRunning regression for: {outcome_name}")
+    print(f"\nRunning Fast Regression for: {outcome_name}")
     
-    # DiD regression with day-of-week controls
-    formula = f"{outcome_var} ~ treatment + post_lift + treatment_post + C(day_of_week)"
-    
-    try:
-        model = ols(formula, data=df).fit()
+    if LINEARMODELS_AVAILABLE:
+        # Prepare data for Linearmodels
+        # We need to separate the "absorbed" effects (FE) from the regressors
         
-        # Check for perfect multicollinearity
-        if hasattr(model, 'condition_number'):
-            cond_num = model.condition_number
-            if cond_num > 1e10:
-                print(f"Warning: High condition number ({cond_num:.2e}), trying simpler model...")
-                formula = f"{outcome_var} ~ treatment + post_lift + treatment_post"
-                model = ols(formula, data=df).fit()
-    except Exception as e:
-        print(f"Error fitting model: {e}")
-        print("Trying simplest possible specification...")
-        formula = f"{outcome_var} ~ treatment + post_lift + treatment_post"
-        model = ols(formula, data=df).fit()
-    
-    # Get clustered standard errors by user
-    user_groups = df['username'].values
-    unique_users = pd.unique(user_groups)
-    user_to_idx = {user: idx for idx, user in enumerate(unique_users)}
-    group_indices = np.array([user_to_idx[user] for user in user_groups])
-    
-    try:
-        model_clustered = model.get_robustcov_results(cov_type='cluster', groups=group_indices)
-        print("Using clustered standard errors (by user)")
-    except Exception as e:
-        print(f"Warning: Clustered standard errors failed: {e}")
-        print("Falling back to robust standard errors (HC1)")
+        # 1. Define Fixed Effects (Absorb)
+        # 'date' + 'username' is standard TWFE.
+        absorb_cols = ['username', 'date'] 
+        
+        # 2. Define Regressors (X)
+        # We need the interaction (DiD estimator) and the group-specific trend
+        exog_vars = ['treatment_post', 'treatment_time_trend']
+        
+        # 3. Define Dependent (Y)
+        y = df[outcome_var]
+        X = df[exog_vars]
+        
+        print(f"Absorbing {df['username'].nunique()} users and {df['date'].nunique()} dates...")
+        
         try:
-            model_clustered = model.get_robustcov_results(cov_type='HC1')
-        except Exception as e2:
-            print(f"Warning: HC1 standard errors also failed: {e2}")
-            print("Using default standard errors (may be unreliable)")
-            model_clustered = model
-    
-    return model_clustered
+            # clusters should be series or dataframe
+            model = AbsorbingLS(y, X, absorb=df[absorb_cols])
+            
+            # Clustered standard errors
+            results = model.fit(cov_type='clustered', clusters=df[['username']])
+            
+            return results
+            
+        except Exception as e:
+            print(f"Linearmodels failed: {e}")
+            raise
+    else:
+        # Fallback to the slow original method if library missing
+        formula = f"{outcome_var} ~ treatment_post + treatment_time_trend + C(username) + C(date)"
+        return ols(formula, data=df).fit().get_robustcov_results(cov_type='cluster', groups=df['username'])
 
-def create_latex_table(models_dict, output_path):
-    """
-    Create a LaTeX table using stargazer with all regression models
+def export_results_latex(results_dict, output_path):
+    """Simple custom LaTeX table generator for linearmodels results"""
+    print(f"Saving LaTeX table to {output_path}")
     
-    Parameters:
-    -----------
-    models_dict : dict
-        Dictionary with keys like (outcome, period) and values as model objects
-        e.g., {('additions', 'two_weeks'): model1, ('additions', 'four_weekdays'): model2, ...}
-    output_path : str
-        Path to save the LaTeX table
-    """
-    if not STARGAZER_AVAILABLE:
-        print("Error: stargazer is not available. Cannot create LaTeX table.")
-        print("Install with: pip install stargazer")
-        return
-    
-    print("\n" + "="*80)
-    print("CREATING LATEX TABLE")
-    print("="*80)
-    
-    # Fix stargazer bug: ensure pandas is available in the statsmodels translator
-    try:
-        import stargazer.translators.statsmodels as stargazer_statsmodels
-        if not hasattr(stargazer_statsmodels, 'pd'):
-            stargazer_statsmodels.pd = pd
-    except (ImportError, AttributeError):
-        pass  # If we can't patch it, try to continue anyway
-    
-    # Organize models by outcome, then by period
-    model_list = []
-    column_labels = []
-    
-    for outcome in ['additions', 'deletions']:
-        for period in ['two_weeks', 'four_weekdays']:
-            key = (outcome, period)
-            if key in models_dict:
-                model_list.append(models_dict[key])
-                # Create column label
-                outcome_label = 'LOC Added' if outcome == 'additions' else 'LOC Deleted'
-                period_label = '2 Weeks' if period == 'two_weeks' else '4 Weekdays'
-                column_labels.append(f"{outcome_label} ({period_label})")
-    
-    if len(model_list) == 0:
-        print("Error: No models found to include in table")
-        return
-    
-    # Create stargazer object
-    stargazer = Stargazer(model_list)
-    
-    # Set covariate order
-    stargazer.covariate_order(['treatment', 'post_lift', 'treatment_post', 'Intercept'])
-    
-    # Rename covariates
-    stargazer.rename_covariates({
-        'treatment': 'Italy',
-        'post_lift': 'Post-Lift',
-        'treatment_post': 'Italy × Post-Lift',
-        'Intercept': 'Constant'
-    })
-    
-    # Configure table
-    stargazer.show_model_numbers(False)
-    stargazer.show_degrees_of_freedom(True)
-    stargazer.custom_columns(column_labels)
-    
-    # Add title
-    stargazer.title("Difference-in-Differences Estimates: Lines of Code Changes After ChatGPT Ban Lift")
-    
-    # Render LaTeX
-    latex_table = stargazer.render_latex()
-    
-    # Save to file
     with open(output_path, 'w') as f:
-        f.write(latex_table)
-    
-    print(f"\nLaTeX table saved to: {output_path}")
-    print("\nLaTeX Table Preview:")
-    print("="*80)
-    print(latex_table[:500] + "..." if len(latex_table) > 500 else latex_table)
-    print("="*80)
+        f.write(r"\begin{table}[htbp]" + "\n")
+        f.write(r"\centering" + "\n")
+        f.write(r"\caption{Difference-in-Differences Results: Post-Ban Lift (Absorbed Fixed Effects)}" + "\n")
+        f.write(r"\begin{tabular}{lcccc}" + "\n")
+        f.write(r"\hline \hline" + "\n")
+        f.write(r" & \multicolumn{2}{c}{Log Additions} & \multicolumn{2}{c}{Log Deletions} \\" + "\n")
+        f.write(r" & 2 Weeks & 4 Weekdays & 2 Weeks & 4 Weekdays \\" + "\n")
+        f.write(r"\hline" + "\n")
+        
+        # Row: Treatment x Post-Lift
+        row_coef = "Italy $\\times$ Post-Lift"
+        row_se = ""
+        
+        # Iterate through the 4 configurations
+        configs = [('log_additions', 'two_weeks'), ('log_additions', 'four_weekdays'),
+                   ('log_deletions', 'two_weeks'), ('log_deletions', 'four_weekdays')]
+        
+        for outcome, period in configs:
+            res = results_dict.get((outcome, period))
+            if res:
+                val = res.params['treatment_post']
+                se = res.std_errors['treatment_post']
+                pval = res.pvalues['treatment_post']
+                
+                stars = ""
+                if pval < 0.01: stars = "***"
+                elif pval < 0.05: stars = "**"
+                elif pval < 0.1: stars = "*"
+                
+                # Only add superscript if there are stars
+                if stars:
+                    row_coef += f" & {val:.4f}^{{{stars}}}"
+                else:
+                    row_coef += f" & {val:.4f}"
+                row_se += f" & ({se:.4f})"
+            else:
+                row_coef += " & -"
+                row_se += " & -"
+                
+        f.write(row_coef + r" \\" + "\n")
+        f.write(row_se + r" \\" + "\n")
+        
+        # Note: Group-specific time trends are included in the model but not shown in table
+        # (They are control variables, not of primary interest)
+        
+        f.write(r"\hline" + "\n")
+        
+        # Stats rows
+        row_obs = "Observations"
+        row_r2 = "$R^2$"
+        
+        for outcome, period in configs:
+            res = results_dict.get((outcome, period))
+            if res:
+                # Format numbers without commas to avoid LaTeX issues
+                row_obs += f" & {int(res.nobs)}"
+                row_r2 += f" & {res.rsquared:.3f}"
+            else:
+                row_obs += " & -"
+                row_r2 += " & -"
+                
+        f.write(row_obs + r" \\" + "\n")
+        f.write(row_r2 + r" \\" + "\n")
+        f.write(r"User FE & Yes & Yes & Yes & Yes \\" + "\n")
+        f.write(r"Date FE & Yes & Yes & Yes & Yes \\" + "\n")
+        f.write(r"\hline \hline" + "\n")
+        f.write(r"\end{tabular}" + "\n")
+        f.write(r"\end{table}" + "\n")
 
 def main():
     try:
-        # Load data
+        # 1. Load Data (Optimized SQL)
         df_raw = load_and_prepare_data()
         
-        # Dictionary to store all models for LaTeX table
         models_dict = {}
-        
-        # Run analyses for both treatment periods and both outcomes
         treatment_periods = ['two_weeks', 'four_weekdays']
-        outcomes = {
-            'additions': 'Lines of Code Added per Developer per Day',
-            'deletions': 'Lines of Code Deleted per Developer per Day'
-        }
+        outcomes = {'log_additions': 'Log Additions', 'log_deletions': 'Log Deletions'}
         
         print("\n" + "="*80)
         print("RUNNING DIFFERENCE-IN-DIFFERENCES ANALYSES: POST-BAN LIFT")
         print("="*80)
         
+        # 2. Run Analysis
         for period in treatment_periods:
             print(f"\n{'='*80}")
             print(f"TREATMENT PERIOD: {period.upper().replace('_', ' ')}")
             print(f"{'='*80}")
             
-            # Prepare data for this treatment period
-            # Using 4 weeks during ban as pre-period
+            # Prepare specific slice (cheap operation now that df_raw is smaller)
             df = prepare_did_variables(df_raw.copy(), treatment_period=period, ban_period_weeks=4)
             
-            # Run regressions for each outcome
             for outcome_var, outcome_name in outcomes.items():
                 print(f"\n{'-'*60}")
                 print(f"OUTCOME: {outcome_name}")
                 print(f"{'-'*60}")
                 
-                # Run regression
-                model = run_did_regression(df, outcome_var, outcome_name)
+                # Run Optimized Regression
+                res = run_fast_regression(df, outcome_var, outcome_name)
+                models_dict[(outcome_var, period)] = res
                 
-                # Store model for LaTeX table
-                models_dict[(outcome_var, period)] = model
-                
-                # Print key results
-                if isinstance(model.params, pd.Series):
-                    params_series = model.params
-                else:
-                    param_names = model.model.exog_names if hasattr(model.model, 'exog_names') else list(range(len(model.params)))
-                    params_series = pd.Series(model.params, index=param_names)
-                
-                if isinstance(model.bse, pd.Series):
-                    bse_series = model.bse
-                else:
-                    bse_series = pd.Series(model.bse, index=params_series.index)
-                
-                if isinstance(model.pvalues, pd.Series):
-                    pvalues_series = model.pvalues
-                else:
-                    pvalues_series = pd.Series(model.pvalues, index=params_series.index)
-                
-                coef_interaction = params_series.get('treatment_post', np.nan)
-                se_interaction = bse_series.get('treatment_post', np.nan)
-                p_val_interaction = pvalues_series.get('treatment_post', np.nan)
-                
-                # Significance indicators
-                if not np.isnan(p_val_interaction):
-                    if p_val_interaction < 0.001:
-                        significance = "***"
-                    elif p_val_interaction < 0.01:
-                        significance = "**"
-                    elif p_val_interaction < 0.05:
-                        significance = "*"
-                    else:
-                        significance = ""
-                else:
-                    significance = ""
-                
-                print(f"DiD Effect (Italy × Post-Lift): {coef_interaction:.4f} (SE: {se_interaction:.4f}) {significance}")
-                print(f"P-value: {p_val_interaction:.4f}")
-                print(f"Observations: {len(df)}")
-                print(f"Number of clusters (users): {df['username'].nunique()}")
+                # Print Quick Summary
+                print(res.summary)
         
-        # Create LaTeX table
+        # 3. Export Table
         output_path = "/Users/richard/University/HASE-25/final report/parts/ban_lift_regression_table.tex"
-        create_latex_table(models_dict, output_path)
+        export_results_latex(models_dict, output_path)
         
         print(f"\n{'='*80}")
         print("ANALYSIS COMPLETE!")

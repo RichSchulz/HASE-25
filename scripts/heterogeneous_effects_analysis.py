@@ -1,546 +1,393 @@
 #!/usr/bin/env python3
 """
-Heterogeneous Effects Analysis for DiD
-Analyzes how the treatment effect varies by:
-1. Developer activity level (high vs low activity)
-2. Repository type (personal vs organizational) - placeholder for now
-3. Time since ban (immediate vs delayed effects)
+Difference-in-Differences Analysis with Heterogeneity (Activity Volume)
+Splits users into Low/Mid/High activity tertiles based on pre-ban behavior.
 """
 
 import pandas as pd
 import numpy as np
 import sqlite3
-from statsmodels.formula.api import ols
-from patsy import Treatment
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from datetime import timedelta
 import warnings
+import gc
+from datetime import timedelta
+
+# Check for linearmodels
+try:
+    from linearmodels.iv import AbsorbingLS
+    LINEARMODELS_AVAILABLE = True
+except ImportError:
+    LINEARMODELS_AVAILABLE = False
+    print("CRITICAL WARNING: 'linearmodels' not installed. Falling back to slow statsmodels.")
+    from statsmodels.formula.api import ols
+
 warnings.filterwarnings('ignore')
 
-def load_and_prepare_data():
-    """Load and prepare commit data from SQLite database for DiD analysis"""
+# ================= CONFIGURATION =================
+DB_PATH = "/Users/richard/University/HASE-25/scripts/data/data_commits.sqlite3"
+OUTPUT_PATH = "/Users/richard/University/HASE-25/final report/parts/did_heterogeneity_table.tex"
+MIN_PRE_PERIOD_COMMITS = 0  # Minimum commits required to be included in analysis (0 = include all users)
+# NOTE: Set to 0 to include ALL users (matches simple_did_analysis.py sample).
+# Set to 5+ to filter to only "active" users. This allows comparison of results with/without
+# the activity filter to see if effects are concentrated among active users.
+# =================================================
+
+def load_data():
+    """Load raw data with SQL filtering to save memory."""
     print("Loading commit data from SQLite database...")
     
-    # Hardcoded path to SQLite database
-    db_path = "/Users/richard/University/HASE-25/scripts/data/data_commits.sqlite3"
-    
-    # Connect to database and load data
-    conn = sqlite3.connect(db_path)
-    
-    # Load all commit data
-    query = """
-    SELECT 
-        country,
-        repository_name,
-        username,
-        commit_sha,
-        commit_message,
-        push_event_timestamp,
-        additions,
-        deletions,
-        changes
+    # Date buffer: Load enough data to establish pre-period activity
+    # NOTE: We need data from Feb 1 to classify users by pre-ban activity,
+    # but we match the simple analysis date range for the analysis window itself
+    sql_start_date = '2023-02-01'  # Need earlier start to classify users by pre-ban activity
+    sql_end_date = '2023-05-01'
+
+    conn = sqlite3.connect(DB_PATH)
+    query = f"""
+    SELECT country, username, push_event_timestamp, additions, deletions, changes, commit_sha
     FROM commit_data
+    WHERE push_event_timestamp BETWEEN '{sql_start_date}' AND '{sql_end_date}'
     """
-    
     df = pd.read_sql_query(query, conn)
     conn.close()
     
-    print(f"Total commits loaded: {len(df)}")
-    print(f"Countries: {df['country'].unique()}")
-    print(f"Unique users: {df['username'].nunique()}")
+    # Basic cleanup
+    df['event_timestamp'] = pd.to_datetime(df['push_event_timestamp'])
+    df['date'] = df['event_timestamp'].dt.date
     
+    # Optimize numeric types
+    cols = ['additions', 'deletions', 'changes']
+    for c in cols:
+        df[c] = pd.to_numeric(df[c], errors='coerce').astype('float32')
+        
+    df = df.dropna(subset=['additions', 'username', 'country', 'date'])
+    print(f"Total raw commits loaded: {len(df)}")
     return df
 
-def calculate_developer_activity_level(df, ban_date):
-    """Calculate pre-ban activity level for each developer"""
-    print("\nCalculating developer activity levels...")
-    
-    # Convert to datetime
-    df['event_timestamp'] = pd.to_datetime(df['push_event_timestamp'])
-    df['date'] = df['event_timestamp'].dt.date
-    
-    # Define pre-ban period (30 days before ban)
-    pre_ban_start = ban_date - timedelta(days=30)
-    pre_ban_end = ban_date - timedelta(days=1)
-    
-    # Filter to pre-ban period
-    pre_ban_data = df[(df['date'] >= pre_ban_start) & (df['date'] < ban_date)].copy()
-    
-    # Calculate daily activity per developer
-    daily_user_stats = pre_ban_data.groupby(['username', 'country', 'date']).agg({
-        'additions': 'sum',
-        'deletions': 'sum',
-        'changes': 'sum',
-        'commit_sha': 'count'
-    }).reset_index()
-    
-    daily_user_stats.rename(columns={'commit_sha': 'commits_count'}, inplace=True)
-    
-    # Calculate average daily activity per developer
-    user_activity = daily_user_stats.groupby(['username', 'country']).agg({
-        'additions': 'mean',
-        'deletions': 'mean',
-        'changes': 'mean',
-        'commits_count': 'mean'
-    }).reset_index()
-    
-    # Create composite activity score (weighted average)
-    # Normalize each metric to 0-1 scale first
-    for metric in ['additions', 'deletions', 'changes', 'commits_count']:
-        max_val = user_activity[metric].max()
-        if max_val > 0:
-            user_activity[f'{metric}_norm'] = user_activity[metric] / max_val
-        else:
-            user_activity[f'{metric}_norm'] = 0
-    
-    # Composite score (equal weights)
-    user_activity['activity_score'] = (
-        user_activity['additions_norm'] * 0.3 +
-        user_activity['deletions_norm'] * 0.2 +
-        user_activity['changes_norm'] * 0.3 +
-        user_activity['commits_count_norm'] * 0.2
-    )
-    
-    # Classify as high/low activity (median split)
-    median_activity = user_activity['activity_score'].median()
-    user_activity['high_activity'] = (user_activity['activity_score'] >= median_activity).astype(int)
-    
-    print(f"Median activity score: {median_activity:.4f}")
-    print(f"High activity developers: {user_activity['high_activity'].sum()}")
-    print(f"Low activity developers: {(user_activity['high_activity'] == 0).sum()}")
-    
-    # Return mapping of username -> activity level
-    activity_map = user_activity[['username', 'country', 'high_activity', 'activity_score']].copy()
-    
-    return activity_map
-
-def load_organization_data_from_csv():
+def classify_users_by_activity(df):
     """
-    Try to load organization data from CSV sample files
-    Returns a DataFrame with repository_name, username, organization_name, organization_id
+    Classifies users into Low, Mid, High activity based on PRE-BAN volume.
+    Filters out users with < MIN_PRE_PERIOD_COMMITS.
     """
-    import glob
-    import os
+    print("\n--- Classifying Users by Activity Level ---")
     
-    csv_files = [
-        "/Users/richard/University/HASE-25/scripts/data/commits_sample_italy_april_2023_enriched.csv",
-        "/Users/richard/University/HASE-25/scripts/data/commits_sample_austria_april_2023_enriched.csv",
-        "/Users/richard/University/HASE-25/scripts/data/commits_sample_france_april_2023_enriched.csv"
-    ]
+    ban_date = pd.Timestamp('2023-04-01').date()
     
-    org_data_list = []
+    # 1. Isolate Pre-Ban Data
+    pre_ban_df = df[df['date'] < ban_date]
     
-    for csv_file in csv_files:
-        if os.path.exists(csv_file):
-            try:
-                # Read only relevant columns
-                df_csv = pd.read_csv(csv_file, usecols=['repository_name', 'username', 
-                                                         'organization_name', 'organization_id'],
-                                     dtype=str, low_memory=False)
-                org_data_list.append(df_csv)
-            except Exception as e:
-                print(f"Warning: Could not load {csv_file}: {e}")
+    # 2. Count commits per user
+    user_activity = pre_ban_df.groupby('username')['commit_sha'].count().reset_index()
+    user_activity.rename(columns={'commit_sha': 'total_pre_commits'}, inplace=True)
     
-    if org_data_list:
-        org_data = pd.concat(org_data_list, ignore_index=True)
-        # Remove duplicates
-        org_data = org_data.drop_duplicates(subset=['repository_name', 'username'])
-        print(f"Loaded organization data for {len(org_data)} repository-user pairs")
-        return org_data
+    total_users = len(user_activity)
+    
+    # 3. Filter Noise (users with very few commits) - only if threshold > 0
+    if MIN_PRE_PERIOD_COMMITS > 0:
+        active_users = user_activity[user_activity['total_pre_commits'] >= MIN_PRE_PERIOD_COMMITS].copy()
+        filtered_count = len(active_users)
+        dropped_count = total_users - filtered_count
+        print(f"Total Users: {total_users}")
+        print(f"Dropped (Assume Inactive/Noise < {MIN_PRE_PERIOD_COMMITS} commits): {dropped_count}")
+        print(f"Remaining Active Users: {filtered_count}")
     else:
-        print("No organization data found in CSV files")
+        active_users = user_activity.copy()
+        print(f"Total Users: {total_users}")
+        print(f"Including ALL users (no minimum commit threshold)")
+    
+    # 4. Split into Tertiles (Low, Mid, High)
+    # qcut partitions data into equal-sized buckets
+    try:
+        active_users['activity_group'] = pd.qcut(
+            active_users['total_pre_commits'], 
+            q=3, 
+            labels=['Low', 'Mid', 'High']
+        )
+    except ValueError:
+        # Fallback if unique values are too sparse for strict quantiles
+        print("Warning: Unique commit counts sparse, using rank method.")
+        active_users['activity_group'] = pd.qcut(
+            active_users['total_pre_commits'].rank(method='first'), 
+            q=3, 
+            labels=['Low', 'Mid', 'High']
+        )
+
+    # Stats for the groups
+    print("\nGroup Thresholds:")
+    print(active_users.groupby('activity_group')['total_pre_commits'].describe()[['min', 'max', 'count', 'mean']])
+    
+    # Convert to string to avoid categorical comparison issues
+    active_users['activity_group'] = active_users['activity_group'].astype(str)
+    
+    return active_users[['username', 'activity_group']]
+
+def prepare_did_variables(df, user_groups, treatment_period='two_weeks', pre_period_weeks=4):
+    """Aggregates data and merges user groups.
+    
+    Parameters match simple_did_analysis.py for consistency:
+    - pre_period_weeks: Number of weeks before ban to include (default: 4)
+    """
+    
+    # Filter df to only include classified users
+    print(f"\nBefore merge: {len(df):,} rows, {df['username'].nunique():,} unique users")
+    print(f"User groups to merge: {len(user_groups):,} users")
+    df = df.merge(user_groups, on='username', how='inner')
+    print(f"After merge: {len(df):,} rows, {df['username'].nunique():,} unique users")
+    print(f"Activity group distribution after merge:")
+    print(df['activity_group'].value_counts())
+    
+    # Date Logic - MATCH simple_did_analysis.py
+    april_1st = pd.Timestamp('2023-04-01').date()
+    pre_period_start = april_1st - timedelta(weeks=pre_period_weeks)
+    
+    # Filter Window - MATCH simple_did_analysis.py
+    if treatment_period == 'two_weeks':
+        end_date = pd.Timestamp('2023-04-15').date()
+        mask = (df['date'] >= pre_period_start) & (df['date'] < end_date)
+    elif treatment_period == 'four_weekdays':
+        end_date = pd.Timestamp('2023-04-07').date()
+        mask = (df['date'] >= pre_period_start) & (df['date'] < end_date)
+    else:
+        raise ValueError(f"Unknown treatment_period: {treatment_period}")
+    
+    df = df[mask].copy()
+    
+    # Aggregate to User-Day level
+    # Note: activity_group should be the same for all rows of a given username
+    # but we include it in groupby to ensure it's preserved
+    daily = df.groupby(['username', 'country', 'date', 'activity_group']).agg({
+        'additions': 'sum',
+        'deletions': 'sum'
+    }).reset_index()
+    
+    # Ensure activity_group is string type for reliable filtering
+    daily['activity_group'] = daily['activity_group'].astype(str)
+    
+    # Convert date to datetime for calculations (needed for weekday check and time trends)
+    daily['date_dt'] = pd.to_datetime(daily['date'])
+    
+    # DiD Setup - MATCH simple_did_analysis.py
+    daily['treatment'] = (daily['country'].str.lower() == 'italy').astype(int)
+    
+    # Post-treatment logic - MATCH simple_did_analysis.py
+    if treatment_period == 'two_weeks':
+        end_post = pd.Timestamp('2023-04-15').date()
+        daily['post_treatment'] = ((daily['date'] >= april_1st) & 
+                                    (daily['date'] < end_post)).astype(int)
+    elif treatment_period == 'four_weekdays':
+        start_post = pd.Timestamp('2023-04-03').date()
+        end_post = pd.Timestamp('2023-04-07').date()
+        daily['is_weekday'] = (daily['date_dt'].dt.dayofweek < 5).astype(int)
+        daily['post_treatment'] = ((daily['date'] >= start_post) & 
+                                   (daily['date'] < end_post) &
+                                   (daily['is_weekday'] == 1)).astype(int)
+    
+    daily['treatment_post'] = daily['treatment'] * daily['post_treatment']
+    
+    # Time Trend (for Linearmodels)
+    min_date = daily['date_dt'].min()
+    daily['days_since_start'] = (daily['date_dt'] - min_date).dt.days
+    daily['treatment_time_trend'] = daily['treatment'] * daily['days_since_start']
+    
+    # Log Outcomes
+    daily['log_additions'] = np.log1p(daily['additions'])
+    daily['log_deletions'] = np.log1p(daily['deletions'])
+    
+    # === CRITICAL FIX: Convert Fixed Effects columns to Category ===
+    daily['username'] = daily['username'].astype('category')
+    daily['date'] = daily['date'].astype('category')
+    
+    return daily
+
+def run_regression(df, outcome_var):
+    """Runs AbsorbingLS Fixed Effects Model."""
+    if LINEARMODELS_AVAILABLE:
+        # Absorb User and Date Fixed Effects
+        absorb_cols = ['username', 'date']
+        exog_vars = ['treatment_post', 'treatment_time_trend']
+        
+        # Remove any rows with missing values in key variables
+        df_clean = df[[outcome_var] + exog_vars + absorb_cols].dropna()
+        
+        if len(df_clean) == 0:
+            print(f"  WARNING: No valid observations after cleaning!")
+            return None
+        
+        y = df_clean[outcome_var]
+        X = df_clean[exog_vars]
+        
+        try:
+            model = AbsorbingLS(y, X, absorb=df_clean[absorb_cols])
+            results = model.fit(cov_type='clustered', clusters=df_clean[['username']])
+            
+            # Store actual observation count from cleaned data
+            # (linearmodels may report different nobs due to FE absorption)
+            results._actual_nobs = len(df_clean)
+            
+            return results
+        except Exception as e:
+            print(f"Regression failed: {e}")
+            return None
+    else:
         return None
 
-def classify_repository_type(df, org_data=None):
+def export_heterogeneity_table(results_map, filepath, treatment_period='two_weeks'):
     """
-    Classify repositories as personal vs organizational
-    
-    Args:
-        df: DataFrame with repository_name and username
-        org_data: Optional DataFrame with organization_name from CSV files
-    
-    Returns:
-        DataFrame with repository_name, username, is_personal_repo, organization_name
+    Creates a LaTeX table comparing Low, Mid, High groups.
+    results_map structure: {(outcome, group, treatment_period): result_object}
     """
-    print("\nClassifying repository types...")
+    print(f"\nExporting table to {filepath} (treatment period: {treatment_period})")
     
-    # Start with repository name and username
-    repo_type = df[['repository_name', 'username']].drop_duplicates().copy()
+    groups = ['Low', 'Mid', 'High']
+    outcomes = ['log_additions', 'log_deletions']
     
-    # If organization data is available, use it
-    if org_data is not None:
-        # Merge organization data
-        repo_type = repo_type.merge(
-            org_data[['repository_name', 'username', 'organization_name', 'organization_id']],
-            on=['repository_name', 'username'],
-            how='left'
-        )
+    with open(filepath, 'w') as f:
+        f.write(r"\begin{table}[htbp]" + "\n")
+        f.write(r"\centering" + "\n")
+        f.write(r"\small" + "\n")
+        f.write(r"\caption{Heterogeneity Analysis by Developer Activity Level}" + "\n")
+        f.write(r"\label{tab:heterogeneity}" + "\n")
+        f.write(r"\begin{tabular}{lccc|ccc}" + "\n")
+        f.write(r"\hline \hline" + "\n")
         
-        # If organization_name exists and is not empty, it's organizational
-        repo_type['is_personal_repo'] = (
-            repo_type['organization_name'].isna() | 
-            (repo_type['organization_name'] == '') |
-            (repo_type['organization_name'].str.strip() == '')
-        ).astype(int)
+        # Header
+        f.write(r" & \multicolumn{3}{c}{\textbf{Log Additions}} & \multicolumn{3}{c}{\textbf{Log Deletions}} \\" + "\n")
+        f.write(r" & Low & Mid & High & Low & Mid & High \\" + "\n")
+        f.write(r"\hline" + "\n")
         
-        print(f"Using organization data from CSV files")
-        print(f"Repositories with organization: {(repo_type['is_personal_repo'] == 0).sum()}")
-        print(f"Personal repositories: {repo_type['is_personal_repo'].sum()}")
+        # Build coefficient row
+        row_coef = "Italy $\\times$ Post"
+        for outcome in outcomes:
+            for group in groups:
+                res = results_map.get((outcome, group, treatment_period))
+                if res:
+                    val = res.params['treatment_post']
+                    pval = res.pvalues['treatment_post']
+                    
+                    stars = ""
+                    if pval < 0.01: stars = "***"
+                    elif pval < 0.05: stars = "**"
+                    elif pval < 0.1: stars = "*"
+                    
+                    row_coef += f" & {val:.4f}$^{{{stars}}}$"
+                else:
+                    row_coef += " & -"
         
-    else:
-        # Fallback: Use simple heuristic
-        # Extract username from repository name (first part before /)
-        repo_type['repo_owner'] = repo_type['repository_name'].str.split('/').str[0]
+        f.write(row_coef + r" \\" + "\n")
         
-        # If repo owner matches username, likely personal
-        # Otherwise, might be organizational (but could also be personal with different name)
-        repo_type['is_personal_repo'] = (
-            repo_type['repo_owner'].str.lower() == repo_type['username'].str.lower()
-        ).astype(int)
+        # Build standard errors row (empty first column to align with coefficient row)
+        row_se = ""
+        for outcome in outcomes:
+            for group in groups:
+                res = results_map.get((outcome, group, treatment_period))
+                if res:
+                    se = res.std_errors['treatment_post']
+                    row_se += f" & ({se:.4f})"
+                else:
+                    row_se += " & -"
         
-        repo_type['organization_name'] = None
-        repo_type['organization_id'] = None
+        f.write(row_se + r" \\" + "\n")
+        f.write(r"\hline" + "\n")
         
-        print(f"Using heuristic classification (repo owner == username)")
-        print(f"Repositories classified as personal: {repo_type['is_personal_repo'].sum()}")
-        print(f"Repositories classified as potentially organizational: {(repo_type['is_personal_repo'] == 0).sum()}")
-        print("Note: This classification is approximate. For better results, use organization_name from enriched data.")
-    
-    return repo_type[['repository_name', 'username', 'is_personal_repo', 'organization_name']]
-
-def prepare_heterogeneous_did_variables(df, activity_map, repo_type_map):
-    """Prepare variables for heterogeneous effects DiD analysis"""
-    print("\nPreparing heterogeneous DiD variables...")
-    
-    # Convert to datetime
-    df['event_timestamp'] = pd.to_datetime(df['push_event_timestamp'])
-    df['date'] = df['event_timestamp'].dt.date
-    
-    # Handle missing data
-    df['additions'] = pd.to_numeric(df['additions'], errors='coerce')
-    df['deletions'] = pd.to_numeric(df['deletions'], errors='coerce')
-    df['changes'] = pd.to_numeric(df['changes'], errors='coerce')
-    
-    # Filter out missing data
-    df = df.dropna(subset=['additions', 'deletions', 'changes', 'username', 'country', 'event_timestamp'])
-    
-    # Aggregate by user and date
-    daily_user_stats = df.groupby(['username', 'country', 'date', 'repository_name']).agg({
-        'additions': 'sum',
-        'deletions': 'sum',
-        'changes': 'sum',
-        'commit_sha': 'count'
-    }).reset_index()
-    
-    daily_user_stats.rename(columns={'commit_sha': 'commits_count'}, inplace=True)
-    
-    # Merge activity level
-    daily_user_stats = daily_user_stats.merge(
-        activity_map[['username', 'country', 'high_activity']],
-        on=['username', 'country'],
-        how='left'
-    )
-    
-    # Fill missing activity (developers with no pre-ban activity) as low activity
-    daily_user_stats['high_activity'] = daily_user_stats['high_activity'].fillna(0).astype(int)
-    
-    # Merge repository type
-    daily_user_stats = daily_user_stats.merge(
-        repo_type_map[['repository_name', 'username', 'is_personal_repo']],
-        on=['repository_name', 'username'],
-        how='left'
-    )
-    
-    # Fill missing repo type as personal (conservative)
-    daily_user_stats['is_personal_repo'] = daily_user_stats['is_personal_repo'].fillna(1).astype(int)
-    
-    # Create treatment group indicator
-    daily_user_stats['treatment'] = (daily_user_stats['country'].str.lower() == 'italy').astype(int)
-    
-    # Create post-treatment indicator
-    ban_date = pd.Timestamp('2023-04-01').date()
-    daily_user_stats['post_treatment'] = (daily_user_stats['date'] >= ban_date).astype(int)
-    
-    # Create interaction term
-    daily_user_stats['treatment_post'] = daily_user_stats['treatment'] * daily_user_stats['post_treatment']
-    
-    # Create time-varying effects (days since ban)
-    daily_user_stats['date_dt'] = pd.to_datetime(daily_user_stats['date'])
-    ban_datetime = pd.Timestamp(ban_date)
-    daily_user_stats['days_since_ban'] = (daily_user_stats['date_dt'] - ban_datetime).dt.days
-    
-    # Create categorical time period variable (mutually exclusive)
-    # Before ban: days < 0
-    # Immediate: days 0-3
-    # Delayed: days 4-7
-    # Later: days 8+
-    daily_user_stats['time_period'] = 'before'
-    daily_user_stats.loc[(daily_user_stats['days_since_ban'] >= 0) & 
-                         (daily_user_stats['days_since_ban'] <= 3), 'time_period'] = 'immediate'
-    daily_user_stats.loc[(daily_user_stats['days_since_ban'] >= 4) & 
-                         (daily_user_stats['days_since_ban'] <= 7), 'time_period'] = 'delayed'
-    daily_user_stats.loc[daily_user_stats['days_since_ban'] >= 8, 'time_period'] = 'later'
-    
-    # Create binary indicators for each time period (for interaction terms)
-    daily_user_stats['is_immediate'] = (daily_user_stats['time_period'] == 'immediate').astype(int)
-    daily_user_stats['is_delayed'] = (daily_user_stats['time_period'] == 'delayed').astype(int)
-    daily_user_stats['is_later'] = (daily_user_stats['time_period'] == 'later').astype(int)
-    
-    # Create heterogeneous interaction terms
-    # Activity level interactions
-    daily_user_stats['treatment_post_high_activity'] = (daily_user_stats['treatment_post'] * 
-                                                         daily_user_stats['high_activity'])
-    daily_user_stats['treatment_post_low_activity'] = (daily_user_stats['treatment_post'] * 
-                                                        (1 - daily_user_stats['high_activity']))
-    
-    # Repository type interactions
-    daily_user_stats['treatment_post_personal'] = (daily_user_stats['treatment_post'] * 
-                                                      daily_user_stats['is_personal_repo'])
-    daily_user_stats['treatment_post_org'] = (daily_user_stats['treatment_post'] * 
-                                              (1 - daily_user_stats['is_personal_repo']))
-    
-    # Time-varying interactions (treatment * time period, only for post-ban periods)
-    daily_user_stats['treatment_immediate'] = (daily_user_stats['treatment'] * 
-                                              daily_user_stats['is_immediate'])
-    daily_user_stats['treatment_delayed'] = (daily_user_stats['treatment'] * 
-                                             daily_user_stats['is_delayed'])
-    daily_user_stats['treatment_later'] = (daily_user_stats['treatment'] * 
-                                           daily_user_stats['is_later'])
-    
-    # Add day of week controls
-    daily_user_stats['day_of_week'] = daily_user_stats['date_dt'].dt.day_name()
-    
-    # Create log variables
-    daily_user_stats['log_additions'] = np.log1p(daily_user_stats['additions'])
-    daily_user_stats['log_commits'] = np.log1p(daily_user_stats['commits_count'])
-    
-    # Convert to standard types
-    for col in ['additions', 'deletions', 'changes', 'commits_count']:
-        if col in daily_user_stats.columns:
-            daily_user_stats[col] = daily_user_stats[col].astype(float)
-    
-    print(f"Prepared {len(daily_user_stats)} observations")
-    
-    return daily_user_stats
-
-def heterogeneous_effects_analysis(df):
-    """Perform heterogeneous effects DiD analysis"""
-    print("\n" + "="*80)
-    print("HETEROGENEOUS EFFECTS ANALYSIS")
-    print("="*80)
-    
-    outcomes = {
-        'log_additions': 'Log(Lines Added + 1)',
-        'log_commits': 'Log(Commits per Day + 1)'
-    }
-    
-    for outcome_var, outcome_name in outcomes.items():
-        print(f"\n{'-'*60}")
-        print(f"OUTCOME: {outcome_name}")
-        print(f"{'-'*60}")
+        # Observations Row
+        # Use actual observation count from dataframe if available, otherwise use res.nobs
+        obs_str = "Observations"
+        for outcome in outcomes:
+            for group in groups:
+                res = results_map.get((outcome, group, treatment_period))
+                if res:
+                    # Prefer manually stored count, fall back to res.nobs
+                    nobs = getattr(res, '_actual_nobs', None) or res.nobs
+                    obs_str += f" & {int(nobs):,}"
+                else:
+                    obs_str += " & -"
+        f.write(obs_str + r" \\" + "\n")
         
-        # 1. Activity Level Heterogeneity
-        print("\n1. EFFECT BY DEVELOPER ACTIVITY LEVEL:")
-        print("-" * 40)
-        
-        formula = (f"{outcome_var} ~ treatment + post_treatment + treatment_post + "
-                  f"treatment_post_high_activity + high_activity + C(day_of_week)")
-        
-        try:
-            model = ols(formula, data=df).fit()
-            
-            # Get clustered standard errors
-            user_groups = df['username'].values
-            unique_users = pd.unique(user_groups)
-            user_to_idx = {user: idx for idx, user in enumerate(unique_users)}
-            group_indices = np.array([user_to_idx[user] for user in user_groups])
-            
-            try:
-                model_clustered = model.get_robustcov_results(cov_type='cluster', groups=group_indices)
-            except:
-                model_clustered = model.get_robustcov_results(cov_type='HC1')
-            
-            # Extract coefficients
-            params = model.params
-            bse = model_clustered.bse
-            pvalues = model_clustered.pvalues
-            
-            # Convert to Series if needed
-            if isinstance(params, pd.Series):
-                params_series = params
-                bse_series = bse if isinstance(bse, pd.Series) else pd.Series(bse, index=params.index)
-                pvalues_series = pvalues if isinstance(pvalues, pd.Series) else pd.Series(pvalues, index=params.index)
-            else:
-                param_names = model.model.exog_names if hasattr(model.model, 'exog_names') else list(range(len(params)))
-                params_series = pd.Series(params, index=param_names)
-                bse_series = pd.Series(bse, index=param_names) if len(bse) == len(param_names) else pd.Series(bse, index=param_names[:len(bse)])
-                pvalues_series = pd.Series(pvalues, index=param_names) if len(pvalues) == len(param_names) else pd.Series(pvalues, index=param_names[:len(pvalues)])
-            
-            # Base effect (low activity)
-            base_effect = params_series.get('treatment_post', 0)
-            base_se = bse_series.get('treatment_post', np.nan)
-            base_pval = pvalues_series.get('treatment_post', np.nan)
-            
-            # High activity effect
-            high_activity_effect = params_series.get('treatment_post_high_activity', 0)
-            high_activity_se = bse_series.get('treatment_post_high_activity', np.nan)
-            high_activity_pval = pvalues_series.get('treatment_post_high_activity', np.nan)
-            
-            # Total effect for high activity
-            total_high_effect = base_effect + high_activity_effect
-            
-            print(f"  Low Activity Developers:")
-            print(f"    DiD Effect: {base_effect:.4f} (SE: {base_se:.4f}, p={base_pval:.4f})")
-            print(f"  High Activity Developers:")
-            print(f"    Additional Effect: {high_activity_effect:.4f} (SE: {high_activity_se:.4f}, p={high_activity_pval:.4f})")
-            print(f"    Total Effect: {total_high_effect:.4f}")
-            
-        except Exception as e:
-            print(f"  Error in activity level analysis: {e}")
-        
-        # 2. Repository Type Heterogeneity
-        print("\n2. EFFECT BY REPOSITORY TYPE:")
-        print("-" * 40)
-        
-        formula = (f"{outcome_var} ~ treatment + post_treatment + treatment_post + "
-                  f"treatment_post_personal + is_personal_repo + C(day_of_week)")
-        
-        try:
-            model = ols(formula, data=df).fit()
-            
-            try:
-                model_clustered = model.get_robustcov_results(cov_type='cluster', groups=group_indices)
-            except:
-                model_clustered = model.get_robustcov_results(cov_type='HC1')
-            
-            params = model.params
-            bse = model_clustered.bse
-            pvalues = model_clustered.pvalues
-            
-            # Convert to Series if needed
-            if isinstance(params, pd.Series):
-                params_series = params
-                bse_series = bse if isinstance(bse, pd.Series) else pd.Series(bse, index=params.index)
-                pvalues_series = pvalues if isinstance(pvalues, pd.Series) else pd.Series(pvalues, index=params.index)
-            else:
-                param_names = model.model.exog_names if hasattr(model.model, 'exog_names') else list(range(len(params)))
-                params_series = pd.Series(params, index=param_names)
-                bse_series = pd.Series(bse, index=param_names) if len(bse) == len(param_names) else pd.Series(bse, index=param_names[:len(bse)])
-                pvalues_series = pd.Series(pvalues, index=param_names) if len(pvalues) == len(param_names) else pd.Series(pvalues, index=param_names[:len(pvalues)])
-            
-            # Personal repos effect
-            personal_effect = params_series.get('treatment_post_personal', 0)
-            personal_se = bse_series.get('treatment_post_personal', np.nan)
-            personal_pval = pvalues_series.get('treatment_post_personal', np.nan)
-            
-            # Organizational repos effect (base effect)
-            org_effect = params_series.get('treatment_post', 0)
-            org_se = bse_series.get('treatment_post', np.nan)
-            org_pval = pvalues_series.get('treatment_post', np.nan)
-            
-            # Total effect for personal repos
-            total_personal_effect = org_effect + personal_effect
-            
-            print(f"  Personal Repositories:")
-            print(f"    Additional Effect: {personal_effect:.4f} (SE: {personal_se:.4f}, p={personal_pval:.4f})")
-            print(f"    Total Effect: {total_personal_effect:.4f}")
-            print(f"  Organizational Repositories:")
-            print(f"    DiD Effect: {org_effect:.4f} (SE: {org_se:.4f}, p={org_pval:.4f})")
-            print("  Note: Repository type classification is approximate. Use organization_name for better results.")
-            
-        except Exception as e:
-            print(f"  Error in repository type analysis: {e}")
-        
-        # 3. Time-Varying Effects
-        print("\n3. TIME-VARYING EFFECTS (IMMEDIATE vs DELAYED):")
-        print("-" * 40)
-        
-        # Use a cleaner specification: treatment + time period main effects + interactions
-        # This avoids multicollinearity by using the categorical time_period variable
-        formula = (f"{outcome_var} ~ treatment + C(time_period, Treatment(reference='before')) + "
-                  f"treatment_immediate + treatment_delayed + treatment_later + C(day_of_week)")
-        
-        try:
-            model = ols(formula, data=df).fit()
-            
-            try:
-                model_clustered = model.get_robustcov_results(cov_type='cluster', groups=group_indices)
-            except:
-                model_clustered = model.get_robustcov_results(cov_type='HC1')
-            
-            params = model.params
-            bse = model_clustered.bse
-            pvalues = model_clustered.pvalues
-            
-            # Convert to Series if needed
-            if isinstance(params, pd.Series):
-                params_series = params
-                bse_series = bse if isinstance(bse, pd.Series) else pd.Series(bse, index=params.index)
-                pvalues_series = pvalues if isinstance(pvalues, pd.Series) else pd.Series(pvalues, index=params.index)
-            else:
-                param_names = model.model.exog_names if hasattr(model.model, 'exog_names') else list(range(len(params)))
-                params_series = pd.Series(params, index=param_names)
-                bse_series = pd.Series(bse, index=param_names) if len(bse) == len(param_names) else pd.Series(bse, index=param_names[:len(bse)])
-                pvalues_series = pd.Series(pvalues, index=param_names) if len(pvalues) == len(param_names) else pd.Series(pvalues, index=param_names[:len(pvalues)])
-            
-            immediate_effect = params_series.get('treatment_immediate', 0)
-            immediate_se = bse_series.get('treatment_immediate', np.nan)
-            immediate_pval = pvalues_series.get('treatment_immediate', np.nan)
-            
-            delayed_effect = params_series.get('treatment_delayed', 0)
-            delayed_se = bse_series.get('treatment_delayed', np.nan)
-            delayed_pval = pvalues_series.get('treatment_delayed', np.nan)
-            
-            later_effect = params_series.get('treatment_later', 0)
-            later_se = bse_series.get('treatment_later', np.nan)
-            later_pval = pvalues_series.get('treatment_later', np.nan)
-            
-            print(f"  Immediate Effect (Days 0-3):")
-            print(f"    DiD Effect: {immediate_effect:.4f} (SE: {immediate_se:.4f}, p={immediate_pval:.4f})")
-            print(f"  Delayed Effect (Days 4-7):")
-            print(f"    DiD Effect: {delayed_effect:.4f} (SE: {delayed_se:.4f}, p={delayed_pval:.4f})")
-            print(f"  Later Effect (Days 8+):")
-            print(f"    DiD Effect: {later_effect:.4f} (SE: {later_se:.4f}, p={later_pval:.4f})")
-            
-        except Exception as e:
-            print(f"  Error in time-varying analysis: {e}")
-            import traceback
-            traceback.print_exc()
+        f.write(r"User FE & Yes & Yes & Yes & Yes & Yes & Yes \\" + "\n")
+        f.write(r"Date FE & Yes & Yes & Yes & Yes & Yes & Yes \\" + "\n")
+        f.write(r"\hline \hline" + "\n")
+        f.write(r"\end{tabular}" + "\n")
+        f.write(r"\vspace{0.1cm}" + "\n")
+        f.write(r"\begin{flushleft}" + "\n")
+        f.write(r"\footnotesize" + "\n")
+        f.write(r"\textit{Notes:} Activity groups defined by pre-ban commit volume tertiles. ")
+        f.write(f"Users with fewer than {MIN_PRE_PERIOD_COMMITS} pre-ban commits excluded. ")
+        f.write(r"Standard errors clustered by user in parentheses. ")
+        f.write(r"*** p$<$0.01, ** p$<$0.05, * p$<$0.1." + "\n")
+        f.write(r"\end{flushleft}" + "\n")
+        f.write(r"\end{table}" + "\n")
 
 def main():
-    print("="*80)
-    print("HETEROGENEOUS EFFECTS ANALYSIS")
-    print("="*80)
+    # 1. Load
+    df_raw = load_data()
     
-    try:
-        # Load data
-        df = load_and_prepare_data()
+    # 2. Classify Users (The Heterogeneity Logic)
+    print("\n" + "="*60)
+    if MIN_PRE_PERIOD_COMMITS > 0:
+        print("IMPORTANT: This analysis filters to only active users")
+        print(f"(>= {MIN_PRE_PERIOD_COMMITS} pre-ban commits)")
+        print("This differs from simple_did_analysis.py which includes ALL users.")
+    else:
+        print("NOTE: Including ALL users (no minimum commit threshold)")
+        print("This matches the sample used in simple_did_analysis.py")
+    print("="*60)
+    user_groups = classify_users_by_activity(df_raw)
+    
+    results_map = {}
+    groups = ['Low', 'Mid', 'High']
+    outcomes = ['log_additions', 'log_deletions']
+    treatment_periods = ['two_weeks', 'four_weekdays']
+    
+    # 3. Run analysis for each treatment period
+    for treatment_period in treatment_periods:
+        print(f"\n{'='*60}")
+        print(f"TREATMENT PERIOD: {treatment_period}")
+        print(f"{'='*60}")
         
-        # Calculate developer activity levels
-        ban_date = pd.Timestamp('2023-04-01').date()
-        activity_map = calculate_developer_activity_level(df, ban_date)
+        # Prepare Data with classification
+        # Use same time window as simple_did_analysis.py (4 weeks pre-period)
+        df_analysis = prepare_did_variables(df_raw, user_groups, treatment_period=treatment_period, pre_period_weeks=4)
         
-        # Try to load organization data from CSV files
-        org_data = load_organization_data_from_csv()
+        print(f"\nPrepared analysis dataset ({treatment_period}):")
+        print(f"  Total rows: {len(df_analysis):,}")
+        print(f"  Unique users: {df_analysis['username'].nunique():,}")
+        print(f"  Unique dates: {df_analysis['date'].nunique()}")
+        print(f"  Rows by group:")
+        print(df_analysis.groupby('activity_group').size())
+        print(f"  Unique users by group:")
+        print(df_analysis.groupby('activity_group')['username'].nunique())
         
-        # Classify repository types (with organization data if available)
-        repo_type_map = classify_repository_type(df, org_data=org_data)
-        
-        # Prepare variables
-        df_prepared = prepare_heterogeneous_did_variables(df, activity_map, repo_type_map)
-        
-        # Perform analysis
-        heterogeneous_effects_analysis(df_prepared)
-        
-        print(f"\n{'='*80}")
-        print("ANALYSIS COMPLETE!")
-        print(f"{'='*80}")
-        
-    except Exception as e:
-        print(f"Error during analysis: {str(e)}")
-        raise
+        # 4. Iterate and Regress
+        print(f"\n--- Running Regressions per Group ({treatment_period}) ---")
+        for group in groups:
+            print(f"\nProcessing Group: {group}")
+            
+            # Filter for specific group (ensure string comparison)
+            group_str = str(group)
+            df_subset = df_analysis[df_analysis['activity_group'].astype(str) == group_str].copy()
+            
+            print(f"     Filtered to group '{group_str}': {len(df_subset):,} rows")
+            
+            if df_subset.empty:
+                print("No data for this group!")
+                continue
+                
+            for outcome in outcomes:
+                print(f"  -> Outcome: {outcome}")
+                print(f"     Subset size: {len(df_subset)} rows")
+                print(f"     Unique users: {df_subset['username'].nunique()}")
+                print(f"     Unique dates: {df_subset['date'].nunique()}")
+                res = run_regression(df_subset, outcome)
+                if res:
+                    # Store with treatment period in key
+                    results_map[(outcome, group, treatment_period)] = res
+                    print(f"     Coef: {res.params['treatment_post']:.4f} (p={res.pvalues['treatment_post']:.4f})")
+                    print(f"     Regression obs (nobs): {int(res.nobs):,}")
+
+    # 5. Export (default to two_weeks, but you can change this to 'four_weekdays' if needed)
+    export_heterogeneity_table(results_map, OUTPUT_PATH, treatment_period='two_weeks')
+    print("\nAnalysis Complete.")
+    print(f"\nNote: Table exported for 'two_weeks' period. To export 'four_weekdays',")
+    print(f"      modify the export_heterogeneity_table call in main().")
 
 if __name__ == "__main__":
     main()
-
