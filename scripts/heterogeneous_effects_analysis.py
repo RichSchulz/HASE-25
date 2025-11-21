@@ -7,24 +7,14 @@ Splits users into Low/Mid/High activity tertiles based on pre-ban behavior.
 import pandas as pd
 import numpy as np
 import sqlite3
-import warnings
-import gc
 from datetime import timedelta
+from linearmodels.iv import AbsorbingLS
+from typing import cast
 
-# Check for linearmodels
-try:
-    from linearmodels.iv import AbsorbingLS
-    LINEARMODELS_AVAILABLE = True
-except ImportError:
-    LINEARMODELS_AVAILABLE = False
-    print("CRITICAL WARNING: 'linearmodels' not installed. Falling back to slow statsmodels.")
-    from statsmodels.formula.api import ols
-
-warnings.filterwarnings('ignore')
 
 # ================= CONFIGURATION =================
-DB_PATH = "/Users/richard/University/HASE-25/scripts/data/data_commits.sqlite3"
-OUTPUT_PATH = "/Users/richard/University/HASE-25/final report/parts/did_heterogeneity_table.tex"
+DB_PATH = "large_data/data_commits.sqlite3"
+OUTPUT_PATH = "../final report/parts/did_heterogeneity_table.tex"
 MIN_PRE_PERIOD_COMMITS = 0  # Minimum commits required to be included in analysis (0 = include all users)
 # NOTE: Set to 0 to include ALL users (matches simple_did_analysis.py sample).
 # Set to 5+ to filter to only "active" users. This allows comparison of results with/without
@@ -54,10 +44,9 @@ def load_data():
     df['event_timestamp'] = pd.to_datetime(df['push_event_timestamp'])
     df['date'] = df['event_timestamp'].dt.date
     
-    # Optimize numeric types
     cols = ['additions', 'deletions', 'changes']
     for c in cols:
-        df[c] = pd.to_numeric(df[c], errors='coerce').astype('float32')
+        df[c] = pd.to_numeric(df[c], errors='coerce')
         
     df = df.dropna(subset=['additions', 'username', 'country', 'date'])
     print(f"Total raw commits loaded: {len(df)}")
@@ -120,12 +109,25 @@ def classify_users_by_activity(df):
     
     return active_users[['username', 'activity_group']]
 
-def prepare_did_variables(df, user_groups, treatment_period='two_weeks', pre_period_weeks=4):
+def prepare_did_variables(
+        df: pd.DataFrame,
+        user_groups,
+        pre_start: pd.Timestamp,
+        pre_end: pd.Timestamp,
+        treatment_start: pd.Timestamp,
+        treatment_end: pd.Timestamp,
+        check_weekday: bool
+):
     """Aggregates data and merges user groups.
     
     Parameters match simple_did_analysis.py for consistency:
     - pre_period_weeks: Number of weeks before ban to include (default: 4)
     """
+
+    pre_start_date = pre_start.date()
+    pre_end_date = pre_end.date()
+    treatment_start_date = treatment_start.date()
+    treatment_end_date = treatment_end.date()
     
     # Filter df to only include classified users
     print(f"\nBefore merge: {len(df):,} rows, {df['username'].nunique():,} unique users")
@@ -135,21 +137,7 @@ def prepare_did_variables(df, user_groups, treatment_period='two_weeks', pre_per
     print(f"Activity group distribution after merge:")
     print(df['activity_group'].value_counts())
     
-    # Date Logic - MATCH simple_did_analysis.py
-    april_1st = pd.Timestamp('2023-04-01').date()
-    pre_period_start = april_1st - timedelta(weeks=pre_period_weeks)
-    
-    # Filter Window - MATCH simple_did_analysis.py
-    if treatment_period == 'two_weeks':
-        end_date = pd.Timestamp('2023-04-15').date()
-        mask = (df['date'] >= pre_period_start) & (df['date'] < end_date)
-    elif treatment_period == 'four_weekdays':
-        end_date = pd.Timestamp('2023-04-07').date()
-        mask = (df['date'] >= pre_period_start) & (df['date'] < end_date)
-    else:
-        raise ValueError(f"Unknown treatment_period: {treatment_period}")
-    
-    df = df[mask].copy()
+    df = cast(pd.DataFrame, df[(df['date'] >= pre_start_date) & (df['date'] < treatment_end_date)]).copy()
     
     # Aggregate to User-Day level
     # Note: activity_group should be the same for all rows of a given username
@@ -168,18 +156,18 @@ def prepare_did_variables(df, user_groups, treatment_period='two_weeks', pre_per
     # DiD Setup - MATCH simple_did_analysis.py
     daily['treatment'] = (daily['country'].str.lower() == 'italy').astype(int)
     
-    # Post-treatment logic - MATCH simple_did_analysis.py
-    if treatment_period == 'two_weeks':
-        end_post = pd.Timestamp('2023-04-15').date()
-        daily['post_treatment'] = ((daily['date'] >= april_1st) & 
-                                    (daily['date'] < end_post)).astype(int)
-    elif treatment_period == 'four_weekdays':
-        start_post = pd.Timestamp('2023-04-03').date()
-        end_post = pd.Timestamp('2023-04-07').date()
+    if check_weekday:
         daily['is_weekday'] = (daily['date_dt'].dt.dayofweek < 5).astype(int)
-        daily['post_treatment'] = ((daily['date'] >= start_post) & 
-                                   (daily['date'] < end_post) &
-                                   (daily['is_weekday'] == 1)).astype(int)
+        daily['post_treatment'] = (
+            (daily['date'] >= treatment_start_date) & 
+            (daily['date'] < treatment_end_date) &
+            (daily['is_weekday'] == 1)
+        ).astype(int)
+    else:
+        daily['post_treatment'] = (
+            (daily['date'] >= treatment_start_date) & 
+            (daily['date'] < treatment_end_date)
+        ).astype(int)
     
     daily['treatment_post'] = daily['treatment'] * daily['post_treatment']
     
@@ -200,34 +188,31 @@ def prepare_did_variables(df, user_groups, treatment_period='two_weeks', pre_per
 
 def run_regression(df, outcome_var):
     """Runs AbsorbingLS Fixed Effects Model."""
-    if LINEARMODELS_AVAILABLE:
-        # Absorb User and Date Fixed Effects
-        absorb_cols = ['username', 'date']
-        exog_vars = ['treatment_post', 'treatment_time_trend']
+    # Absorb User and Date Fixed Effects
+    absorb_cols = ['username', 'date']
+    exog_vars = ['treatment_post', 'treatment_time_trend']
+    
+    # Remove any rows with missing values in key variables
+    df_clean = df[[outcome_var] + exog_vars + absorb_cols].dropna()
+    
+    if len(df_clean) == 0:
+        print(f"  WARNING: No valid observations after cleaning!")
+        return None
+    
+    y = df_clean[outcome_var]
+    X = df_clean[exog_vars]
+    
+    try:
+        model = AbsorbingLS(y, X, absorb=df_clean[absorb_cols])
+        results = model.fit(cov_type='clustered', clusters=df_clean[['username']])
         
-        # Remove any rows with missing values in key variables
-        df_clean = df[[outcome_var] + exog_vars + absorb_cols].dropna()
+        # Store actual observation count from cleaned data
+        # (linearmodels may report different nobs due to FE absorption)
+        results._actual_nobs = len(df_clean)
         
-        if len(df_clean) == 0:
-            print(f"  WARNING: No valid observations after cleaning!")
-            return None
-        
-        y = df_clean[outcome_var]
-        X = df_clean[exog_vars]
-        
-        try:
-            model = AbsorbingLS(y, X, absorb=df_clean[absorb_cols])
-            results = model.fit(cov_type='clustered', clusters=df_clean[['username']])
-            
-            # Store actual observation count from cleaned data
-            # (linearmodels may report different nobs due to FE absorption)
-            results._actual_nobs = len(df_clean)
-            
-            return results
-        except Exception as e:
-            print(f"Regression failed: {e}")
-            return None
-    else:
+        return results
+    except Exception as e:
+        print(f"Regression failed: {e}")
         return None
 
 def export_heterogeneity_table(results_map, filepath, treatment_period='two_weeks'):
@@ -345,7 +330,15 @@ def main():
         
         # Prepare Data with classification
         # Use same time window as simple_did_analysis.py (4 weeks pre-period)
-        df_analysis = prepare_did_variables(df_raw, user_groups, treatment_period=treatment_period, pre_period_weeks=4)
+        df_analysis = prepare_did_variables(
+            df_raw,
+            user_groups,
+            pre_start=cast(pd.Timestamp, pd.Timestamp('2023-03-04')),
+            pre_end=cast(pd.Timestamp, pd.Timestamp('2023-03-31')),
+            treatment_start=cast(pd.Timestamp, pd.Timestamp('2023-04-01') if treatment_period == 'two_weeks' else pd.Timestamp('2023-04-03')),
+            treatment_end=cast(pd.Timestamp, pd.Timestamp('2023-04-15') if treatment_period == 'two_weeks' else pd.Timestamp('2023-04-07')),
+            check_weekday=True if treatment_period == 'four_weekdays' else False
+        )
         
         print(f"\nPrepared analysis dataset ({treatment_period}):")
         print(f"  Total rows: {len(df_analysis):,}")

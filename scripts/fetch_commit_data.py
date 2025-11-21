@@ -65,7 +65,7 @@ def create_data_commits_table(conn: sqlite3.Connection):
             commit_sha TEXT,
             commit_message TEXT,
             push_event_timestamp TIMESTAMP,
-            FILES INTEGER,
+            files INTEGER,
             additions INTEGER,
             deletions INTEGER,
             changes INTEGER
