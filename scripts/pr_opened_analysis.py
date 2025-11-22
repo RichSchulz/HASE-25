@@ -159,10 +159,10 @@ def export_results_latex(results_dict, output_path):
         f.write(r"\begin{table}[htbp]" + "\n")
         f.write(r"\centering" + "\n")
         f.write(r"\caption{Difference-in-Differences Results (Absorbed Fixed Effects)}" + "\n")
-        f.write(r"\begin{tabular}{lcccc}" + "\n")
+        f.write(r"\begin{tabular}{lcc}" + "\n")
         f.write(r"\hline \hline" + "\n")
-        f.write(r" & \multicolumn{2}{c}{Log Additions} & \multicolumn{2}{c}{Log Deletions} \\" + "\n")
-        f.write(r" & 2 Weeks & 4 Weekdays & 2 Weeks & 4 Weekdays \\" + "\n")
+        f.write(r" & \multicolumn{2}{c}{Log Pull Requests Opened} \\" + "\n")
+        f.write(r" & 2 Weeks & 4 Weekdays \\" + "\n")
         f.write(r"\hline" + "\n")
         
         # Row: Treatment x Post
@@ -187,8 +187,8 @@ def export_results_latex(results_dict, output_path):
                 elif pval < 0.05: stars = "**"
                 elif pval < 0.1: stars = "*"
                 
-                row_coef += f" & {val:.4f}^{{{stars}}}"
-                row_se += f" & ({se:.4f})"
+                row_coef += f" & ${val:.4f}^{{{stars}}}$"
+                row_se += f" & $({se:.4f})$"
             else:
                 row_coef += " & -"
                 row_se += " & -"
@@ -208,16 +208,16 @@ def export_results_latex(results_dict, output_path):
         for outcome, period in configs:
             res = results_dict.get((outcome, period))
             if res:
-                row_obs += f" & {int(res.nobs):,}"
-                row_r2 += f" & {res.rsquared:.3f}"
+                row_obs += f" & ${int(res.nobs):,}$"
+                row_r2 += f" & ${res.rsquared:.3f}$"
             else:
                 row_obs += " & -"
                 row_r2 += " & -"
                 
         f.write(row_obs + r" \\" + "\n")
         f.write(row_r2 + r" \\" + "\n")
-        f.write(r"User FE & Yes & Yes & Yes & Yes \\" + "\n")
-        f.write(r"Date FE & Yes & Yes & Yes & Yes \\" + "\n")
+        f.write(r"User FE & Yes & Yes \\" + "\n")
+        f.write(r"Date FE & Yes & Yes \\" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r"\end{tabular}" + "\n")
         f.write(r"\end{table}" + "\n")
