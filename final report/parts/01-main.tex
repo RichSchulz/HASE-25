@@ -1,4 +1,4 @@
-\section*{Introduction}
+\section{Introduction}
 
 Substantial anecdotal evidence suggests that AI-assisted coding tools such as ChatGPT \cite{openai_chatgpt} have significantly increased developer productivity. However, recent empirical research has shown mixed results \cite{cui2025the, paradis2024doesaiimpactdevelopment, peng2023impactaideveloperproductivity}. While some studies find notable efficiency gains from integrating generative AI into software development workflows—for instance, faster code completion and reduced debugging time—other work points to limited or highly context-dependent effects, with improvements varying by task complexity, developer experience, and integration depth.
 
@@ -19,39 +19,39 @@ To investigate these questions, we examine how the ChatGPT ban affected develope
 
 These research questions allow us to examine both the immediate behavioral response (coding activity) and potential downstream quality impacts (bug reports) of the ban, providing a more comprehensive understanding of how the disruption in AI tool access affected the day-to-day development process.
 
-\section*{Related Work}
+\section{Related Work}
 
-\subsection*{AI-Assisted Coding Tools and Developer Productivity}
+\subsection{AI-Assisted Coding Tools and Developer Productivity}
 
 A growing body of empirical research has investigated the impact of AI-assisted coding tools on developer productivity. Early studies on GitHub Copilot found significant productivity gains, with developers completing tasks faster when using AI code completion \cite{peng2023impactaideveloperproductivity}. More recent large-scale field experiments have provided mixed evidence: Cui et al. \cite{cui2025the} conducted randomized controlled trials across three companies and found a 26\% increase in completed tasks among developers using AI tools, with less experienced developers showing greater gains. However, Paradis et al. \cite{paradis2024doesaiimpactdevelopment} reported more context-dependent effects in enterprise settings, suggesting that productivity improvements vary substantially by task complexity and developer experience. Becker et al. \cite{becker2025measuringimpactearly2025ai} examined open-source developers and found nuanced effects that depend on the type of development work being performed.
 
 While these studies provide valuable insights, they primarily rely on controlled experiments or observational data that may not capture real-world behavioral responses to sudden changes in tool availability. Most existing work focuses on productivity gains during tool adoption, leaving open the question of how developers adapt when access to these tools is abruptly disrupted.
 
-\subsection*{Code Quality and Security Concerns}
+\subsection{Code Quality and Security Concerns}
 
 Alongside productivity gains, researchers have raised concerns about the quality of AI-generated code. Pearce et al. \cite{pearce2021asleepkeyboardassessingsecurity} conducted an early security assessment of GitHub Copilot and found that it frequently generates code with security vulnerabilities. More recently, Fu et al. \cite{fu2025securityweaknessescopilotgeneratedcode} conducted an empirical study of Copilot-generated code in GitHub projects and documented a concerning prevalence of security weaknesses. These findings suggest that while AI tools may increase coding speed, they may also introduce quality trade-offs that manifest through increased bug reports and security issues.
 
-\subsection*{The ChatGPT Ban as a Natural Experiment}
+\subsection{The ChatGPT Ban as a Natural Experiment}
 
 Kreitmeir and Raschky \cite{Kreitmeir2023} were the first to leverage Italy's ChatGPT ban as a quasi-experimental setting to study the real-world impact of AI tool access. Using a difference-in-differences design, they analyzed GitHub release events and documented a 50\% decline in releases from Italian open-source projects during the first days of the ban. This work established the ban as a valuable natural experiment and demonstrated the feasibility of using GitHub activity data to study developer behavior at scale.
 
 However, their analysis focused on aggregate project-level outcomes (release events), which capture only high-level project milestones. The granular, day-to-day development process—including actual code production and quality indicators—remains unexamined. Our work extends this foundation by investigating code-level and issue-level metrics that provide more direct measures of developer activity and code quality.
 
-\subsection*{Measuring Developer Productivity}
+\subsection{Measuring Developer Productivity}
 
 Prior research has employed various metrics to measure developer productivity, ranging from task completion times to lines of code contributed. Code-level metrics such as lines of code added and deleted have been widely used in empirical software engineering research as indicators of coding activity \cite{peng2023impactaideveloperproductivity, cui2025the, paradis2024doesaiimpactdevelopment}. While imperfect proxies for productivity, these metrics capture granular development behavior that aggregate measures like releases cannot. Issue tracking systems, particularly bug reports, serve as important quality indicators in software development and have been used to assess the relationship between development practices and code quality \cite{fu2025securityweaknessescopilotgeneratedcode}.
 
-\section*{Methodology}
+\section{Methodology}
 
-\subsection*{Data}
+\subsection{Data}
 
 The empirical analysis uses historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the early April 2023 ban. We leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Since GH Archive data does not include developers' location information, we infer user countries based on their public profiles, following the methods from prior research \cite{Kreitmeir2023}.
 
-\subsection*{Control Group Selection}
+\subsection{Control Group Selection}
 
 We follow Kreitmeir and Raschky \cite{Kreitmeir2023} in selecting Austria and France as the control group for our difference-in-differences analysis. This choice is motivated by several factors that strengthen the validity of the parallel trends assumption, which is critical for causal inference in DiD designs \cite{mostly_harmless_econometrics}. First, Austria and France share cultural and linguistic similarities with Italy, being neighboring European countries with comparable levels of economic development and technology adoption. Second, their geographic proximity means they are likely subject to similar regional trends in software development practices, AI tool adoption, and broader technological developments. Third, these countries were not affected by the ChatGPT ban, making them suitable counterfactuals for what would have happened in Italy in the absence of the ban. This selection helps ensure that any observed differences between Italy and the control countries during the ban period are attributable to the ban itself rather than to pre-existing differences in development trends.
 
-\subsection*{Research Design}
+\subsection{Research Design}
 
 We employ a \textbf{Difference-in-Differences (DiD)} quasi-experimental design to ensure causal inference, replicating the framework from the original paper. The analysis compares the change in developer metrics in Italy (treatment group) against those in Austria and France (control group). 
 
@@ -68,9 +68,9 @@ All variables will be standardized at the developer-day level to account for ind
 
 To explore whether the ban's effects varied across different types of developers, we conduct a heterogeneity analysis by stratifying developers into activity groups based on pre-ban commit volume tertiles. This analysis allows us to examine whether developers with different baseline activity levels responded differently to the ban, which could provide insights into how AI tool usage patterns vary across developer types.
 
-\section*{Results}
+\section{Results}
 
-\subsection*{Code Volume Analysis}
+\subsection{Code Volume Analysis}
 
 We begin by examining the impact of the ChatGPT ban on developers' coding activity, as measured by lines of code (LOC) added and deleted per developer per day. Table~\ref{tab:did-loc} presents the difference-in-differences regression results for both the two-week post-ban period and the first four working days after the ban implementation.
 
@@ -82,7 +82,7 @@ These null results are likely explained by widespread ban circumvention through 
 
 These results address RQ1, indicating that we do not find statistically significant evidence that the ChatGPT ban caused a reduction in the daily volume of code contributed by developers in Italy when controlling for developer and temporal heterogeneity. The null findings are consistent with effective circumvention of the ban rather than an absence of AI tool effects on coding activity.
 
-\subsubsection*{Heterogeneity Analysis}
+\subsubsection{Heterogeneity Analysis}
 
 To explore whether the ban's effects varied across different types of developers, we conduct a heterogeneity analysis by developer activity level. We stratify developers into three groups (low, mid, and high activity) based on pre-ban commit volume tertiles, excluding users with fewer than 0 pre-ban commits. Table~\ref{tab:heterogeneity} presents the difference-in-differences estimates separately for each activity group.
 
@@ -90,7 +90,7 @@ To explore whether the ban's effects varied across different types of developers
 
 The results show no statistically significant heterogeneity in the ban's impact across developer activity levels. For log additions, the treatment effects are 0.0238 (SE: 0.2172) for low-activity developers, 0.0741 (SE: 0.1085) for mid-activity developers, and 0.0016 (SE: 0.0560) for high-activity developers. For log deletions, the corresponding effects are -0.0908 (SE: 0.2145), -0.0196 (SE: 0.1068), and 0.0192 (SE: 0.0565) for low, mid, and high-activity developers, respectively. None of these coefficients are statistically significant at conventional levels, indicating that we do not find evidence of differential effects of the ban across developer activity groups. The null results across all activity levels are consistent with the main findings and suggest that the ban did not have statistically detectable impacts on coding activity regardless of developers' baseline activity levels.
 
-\subsubsection*{Ban Lift Analysis}
+\subsubsection{Ban Lift Analysis}
 
 To further examine the causal relationship, we analyze the period following the ban's lift on April 28th, 2023. Table~\ref{tab:did-lift} presents difference-in-differences estimates comparing coding activity before and after the ban was lifted. The coefficient on ``Italy × Post-Lift'' represents whether developers in Italy experienced a rebound in coding activity relative to the control countries once ChatGPT access was restored.
 
@@ -100,17 +100,21 @@ We find no statistically significant effects in any of the specifications. The c
 
 The absence of a rebound effect is consistent with our main findings and provides the strongest evidence for our interpretation: \textbf{if there was no initial dip in coding activity due to circumvention, there can be no rebound when the ban is lifted}. As documented in Appendix~\ref{appendix:circumvention}, VPN searches in Italy increased by 28.6 points immediately following the ban implementation, indicating widespread circumvention that allowed developers to maintain access to ChatGPT throughout the ban period. By the time the ban was officially lifted on April 28th, many developers had already circumvented the restriction weeks earlier, meaning the lift had no meaningful impact on their access. The null results in both the ban period and the ban lift period are therefore mutually reinforcing: they both point to effective circumvention as the explanation for why we observe no treatment effects on coding activity.
 
-\subsection*{Code Quality Indicators}
+\subsection{Code Quality Indicators}
 
 [Analysis of bug-related issue creation to be completed]
 
-\section*{Discussion}
+\subsection{Pull Requests Opened Analysis}
 
-\subsection*{The Resilience of Developer Workflows}
+\input{parts/prs_opened_did_table}
+
+\section{Discussion}
+
+\subsection{The Resilience of Developer Workflows}
 Contrary to expectations derived from recent field experiments, which documented significant productivity gains from AI adoption \cite{peng2023impactaideveloperproductivity,cui2025the}, our analysis revealed no statistically significant reduction in coding volume following the ChatGPT ban. We argue that this null result should not be interpreted as evidence that Generative AI lacks utility, but rather as evidence of the high \textit{resilience} of developer workflows against external disruptions.
 
 This interpretation is strongly supported by our analysis of search trends, which shows a dramatic, immediate spike in VPN search interest in Italy—reaching peak popularity (index 100) on the very day the ban was implemented (see Figure \ref{fig:vpn-timeseries}). While Google Trends data aggregates interest across the general population, software developers possess the specific \textit{technological fluency} required to rapidly adopt circumvention tools. 
 
 Viewed through the lens of organizational psychology, this behavior represents an immediate shift to ``Shadow IT,'' where the perceived cognitive value of the AI tool outweighed the friction of non-compliance. Consequently, the ``treatment'' in this natural experiment was likely porous; the stability of the Lines of Code (LOC) metric suggests that developers successfully maintained their AI-augmented workflows by bypassing the geographic restriction, effectively treating the ban as a technical hurdle rather than a hard constraint.
 
-\section*{Conclusion}
+\section{Conclusion}
