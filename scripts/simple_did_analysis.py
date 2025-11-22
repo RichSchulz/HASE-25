@@ -200,8 +200,8 @@ def export_results_latex(results_dict, output_path):
                 elif pval < 0.05: stars = "**"
                 elif pval < 0.1: stars = "*"
                 
-                row_coef += f" & {val:.4f}^{{{stars}}}"
-                row_se += f" & ({se:.4f})"
+                row_coef += f" & ${val:.4f}^{{{stars}}}$"
+                row_se += f" & $({se:.4f})$"
             else:
                 row_coef += " & -"
                 row_se += " & -"
@@ -221,8 +221,8 @@ def export_results_latex(results_dict, output_path):
         for outcome, period in configs:
             res = results_dict.get((outcome, period))
             if res:
-                row_obs += f" & {int(res.nobs):,}"
-                row_r2 += f" & {res.rsquared:.3f}"
+                row_obs += f" & ${int(res.nobs):,}$"
+                row_r2 += f" & ${res.rsquared:.3f}$"
             else:
                 row_obs += " & -"
                 row_r2 += " & -"
