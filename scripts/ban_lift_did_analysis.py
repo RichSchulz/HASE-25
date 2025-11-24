@@ -36,7 +36,7 @@ def load_and_prepare_data(ban_period_weeks=4):
     """
     print("Loading commit data from SQLite database...")
     
-    db_path = "/Users/richard/University/HASE-25/scripts/data/data_commits.sqlite3"
+    db_path = "large_data/data_commits.sqlite3"
     
     # Calculate safe date buffer for SQL (give extra weeks to be safe)
     # Ban lift date is 2023-04-28. We need roughly March 1st to May 15th.
@@ -216,9 +216,9 @@ def export_results_latex(results_dict, output_path):
         f.write(r"\begin{table}[htbp]" + "\n")
         f.write(r"\centering" + "\n")
         f.write(r"\caption{Difference-in-Differences Results: Post-Ban Lift (Absorbed Fixed Effects)}" + "\n")
-        f.write(r"\begin{tabular}{lcccc}" + "\n")
+        f.write(r"\begin{tabular}{l|cc|cc}" + "\n")
         f.write(r"\hline \hline" + "\n")
-        f.write(r" & \multicolumn{2}{c}{Log Additions} & \multicolumn{2}{c}{Log Deletions} \\" + "\n")
+        f.write(r" & \multicolumn{2}{c|}{\textbf{Log Additions}} & \multicolumn{2}{c}{\textbf{Log Deletions}} \\" + "\n")
         f.write(r" & 2 Weeks & 4 Weekdays & 2 Weeks & 4 Weekdays \\" + "\n")
         f.write(r"\hline" + "\n")
         
@@ -317,7 +317,7 @@ def main():
                 print(res.summary)
         
         # 3. Export Table
-        output_path = "/Users/richard/University/HASE-25/final report/parts/ban_lift_regression_table.tex"
+        output_path = "../final report/parts/ban_lift_regression_table.tex"
         export_results_latex(models_dict, output_path)
         
         print(f"\n{'='*80}")

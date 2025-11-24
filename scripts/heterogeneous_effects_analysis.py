@@ -228,14 +228,13 @@ def export_heterogeneity_table(results_map, filepath, treatment_period='two_week
     with open(filepath, 'w') as f:
         f.write(r"\begin{table}[htbp]" + "\n")
         f.write(r"\centering" + "\n")
-        f.write(r"\small" + "\n")
         f.write(r"\caption{Heterogeneity Analysis by Developer Activity Level}" + "\n")
         f.write(r"\label{tab:heterogeneity}" + "\n")
-        f.write(r"\begin{tabular}{lccc|ccc}" + "\n")
+        f.write(r"\begin{tabular}{l|ccc|ccc}" + "\n")
         f.write(r"\hline \hline" + "\n")
         
         # Header
-        f.write(r" & \multicolumn{3}{c}{\textbf{Log Additions}} & \multicolumn{3}{c}{\textbf{Log Deletions}} \\" + "\n")
+        f.write(r" & \multicolumn{3}{c|}{\textbf{Log Additions}} & \multicolumn{3}{c}{\textbf{Log Deletions}} \\" + "\n")
         f.write(r" & Low & Mid & High & Low & Mid & High \\" + "\n")
         f.write(r"\hline" + "\n")
         

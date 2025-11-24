@@ -159,9 +159,9 @@ def export_results_latex(results_dict, output_path):
         f.write(r"\begin{table}[htbp]" + "\n")
         f.write(r"\centering" + "\n")
         f.write(r"\caption{Difference-in-Differences Results (Absorbed Fixed Effects)}" + "\n")
-        f.write(r"\begin{tabular}{lcc}" + "\n")
+        f.write(r"\begin{tabular}{l|cc}" + "\n")
         f.write(r"\hline \hline" + "\n")
-        f.write(r" & \multicolumn{2}{c}{Log Pull Requests Opened} \\" + "\n")
+        f.write(r" & \multicolumn{2}{c}{\textbf{Log Pull Requests Opened}} \\" + "\n")
         f.write(r" & 2 Weeks & 4 Weekdays \\" + "\n")
         f.write(r"\hline" + "\n")
         
