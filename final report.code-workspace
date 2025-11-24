@@ -37,7 +37,10 @@
     "ltex.latex.commands": {
       "\\MakeOuterQuote{}": "dummy"
     },
-    "latex-workshop.latex.search.rootFiles.include": ["**/report.tex", "**/proposal.tex"]
+    "latex-workshop.latex.search.rootFiles.include": [
+      "**/report.tex",
+      "**/proposal.tex"
+    ]
   },
   "extensions": {
     "recommendations": [
