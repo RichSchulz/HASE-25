@@ -226,10 +226,6 @@ def export_heterogeneity_table(results_map, filepath, treatment_period='two_week
     outcomes = ['log_additions', 'log_deletions']
     
     with open(filepath, 'w') as f:
-        f.write(r"\begin{table}[htbp]" + "\n")
-        f.write(r"\centering" + "\n")
-        f.write(r"\caption{Heterogeneity Analysis by Developer Activity Level}" + "\n")
-        f.write(r"\label{tab:heterogeneity}" + "\n")
         f.write(r"\begin{tabular}{l|ccc|ccc}" + "\n")
         f.write(r"\hline \hline" + "\n")
         
@@ -290,15 +286,6 @@ def export_heterogeneity_table(results_map, filepath, treatment_period='two_week
         f.write(r"Date FE & Yes & Yes & Yes & Yes & Yes & Yes \\" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r"\end{tabular}" + "\n")
-        f.write(r"\vspace{0.1cm}" + "\n")
-        f.write(r"\begin{flushleft}" + "\n")
-        f.write(r"\footnotesize" + "\n")
-        f.write(r"\textit{Notes:} Activity groups defined by pre-ban commit volume tertiles. ")
-        f.write(f"Users with fewer than {MIN_PRE_PERIOD_COMMITS} pre-ban commits excluded. ")
-        f.write(r"Standard errors clustered by user in parentheses. ")
-        f.write(r"*** p$<$0.01, ** p$<$0.05, * p$<$0.1." + "\n")
-        f.write(r"\end{flushleft}" + "\n")
-        f.write(r"\end{table}" + "\n")
 
 def main():
     # 1. Load
