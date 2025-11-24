@@ -216,6 +216,7 @@ def export_results_latex(results_dict, output_path):
         f.write(r"\begin{table}[htbp]" + "\n")
         f.write(r"\centering" + "\n")
         f.write(r"\caption{Difference-in-Differences Results: Post-Ban Lift (Absorbed Fixed Effects)}" + "\n")
+        f.write(r"\label{tab:did-lift}" + "\n")
         f.write(r"\begin{tabular}{l|cc|cc}" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r" & \multicolumn{2}{c|}{\textbf{Log Additions}} & \multicolumn{2}{c}{\textbf{Log Deletions}} \\" + "\n")

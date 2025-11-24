@@ -96,7 +96,19 @@ The absence of a rebound effect is consistent with our main findings and provide
 
 \subsection{Pull Requests Opened Analysis}
 
-\input{parts/prs_opened_did_table}
+To address RQ2, we examine the impact of the ChatGPT ban on the number of pull requests opened by developers in Italy. Table~\ref{tab:did-prs-opened} presents the difference-in-differences regression results for pull requests opened per developer per day, using the same time windows as in the code volume analysis.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Difference-in-Differences Results: Pull Requests Opened (Absorbed Fixed Effects)}
+  \label{tab:did-prs-opened}
+  \input{parts/prs_opened_did_table}
+  \par\vspace{0.1cm}
+  \textit{Note:} *** p$<$0.01, ** p$<$0.05, * p$<$0.1
+\end{table}
+
+``Italy × Post-Ban'' captures the treatment effect of the ban on pull request activity in Italy relative to the control countries (Austria and France). The results show no statistically significant effects on pull requests opened in the two-weeks period. We observe a treatment effect of 0.0326 (SE: 0.0524) for the four-weekday period, indicating a slight increase of pull requests opened. This effect is statistically significant at the 10\% level (p$=$0.0897), suggesting a weak positive impact of the ban on pull request activity during this shorter time frame. However, given the small effect size and limited statistical significance, this result may reflect random variation rather than a true treatment effect.
+
 
 \section{Discussion}
 

@@ -156,9 +156,6 @@ def export_results_latex(results_dict, output_path):
     print(f"Saving LaTeX table to {output_path}")
     
     with open(output_path, 'w') as f:
-        f.write(r"\begin{table}[htbp]" + "\n")
-        f.write(r"\centering" + "\n")
-        f.write(r"\caption{Difference-in-Differences Results (Absorbed Fixed Effects)}" + "\n")
         f.write(r"\begin{tabular}{l|cc}" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r" & \multicolumn{2}{c}{\textbf{Log Pull Requests Opened}} \\" + "\n")
@@ -220,8 +217,6 @@ def export_results_latex(results_dict, output_path):
         f.write(r"Date FE & Yes & Yes \\" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r"\end{tabular}" + "\n")
-        f.write(r"\end{table}" + "\n")
-
 
 # Re-use the plotting functions from original script (omitted here for brevity, they were fine)
 def plot_lines_added_before_after(df):
