@@ -31,17 +31,17 @@ While these studies provide valuable insights, they are primarily conducted in c
 
 Kreitmeir and Raschky \cite{Kreitmeir2023} were the first to leverage Italy's ChatGPT ban as a quasi-experimental setting to study the real-world impact of AI tool access. Using a difference-in-differences design, they analyzed GitHub release events and documented a 50\% decline in releases from Italian open-source projects during the first days of the ban. This work established the ban as a valuable natural experiment and demonstrated the feasibility of using GitHub activity data to study developer behavior at scale.
 
-However, their analysis focused on aggregate project-level outcomes (release events), which capture only high-level project milestones. A release may bundle multiple features and code changes, making it less sensitive to immediate shifts in day-to-day coding activity. Additionally, releases might be influenced by factors beyond individual developer productivity, such as project management practices and team coordination. The granular, day-to-day development process—including actual code production indicators—remains unexamined. Our work extends this foundation by investigating code-level and issue-level metrics that provide more direct measures of developer activity.
+However, their analysis focused on aggregate project-level outcomes (release events), which capture only high-level project milestones. A release may bundle multiple features and code changes, making it less sensitive to immediate shifts in day-to-day coding activity. Additionally, releases might be influenced by factors beyond individual developer productivity, such as project management practices and team coordination. The granular, day-to-day development process—including actual code production indicators—remains unexamined. Our work extends this foundation by investigating code-level and feature-level metrics that provide more direct measures of developer activity.
 
 \subsection{Measuring Developer Productivity}
 
-Prior research has demonstrated that developer productivity is influenced by multiple factors and, therefore, cannot be accurately captured by a single metric \cite{forsgren2021the}. Moreover, measuring output quantity—such as the number of lines of code a developer adds—can encourage behavior aimed at optimizing the metric rather than achieving meaningful progress \cite{ziegler2024measuring}. However, when working with historical data, alternative metrics are often unavailable. In such cases, and particularly when developers are unaware that their output is being measured, the risk of such gaming is relatively low. Accordingly, in this study, we use activity measures such as lines of code added and deleted, as well as pull requests opened, as proxies for developer productivity, while acknowledging the inherent limitations of this approach.
+Prior research has demonstrated that developer productivity is influenced by multiple factors and, therefore, cannot be accurately captured by a single metric \cite{forsgren2021the}. Moreover, measuring output quantity—such as the number of lines of code a developer adds—can encourage behavior aimed at optimizing the metric rather than achieving meaningful progress \cite{ziegler2024measuring}. However, when working with historical data, alternative metrics are often unavailable. In such cases, and particularly when developers are unaware that their output is being measured, the risk of such gaming is relatively low. Accordingly, in this study, we use activity measures (lines of code added \& deleted and number of pull requests opened) as proxies for developer productivity, while acknowledging the inherent limitations of this approach.
 
 \section{Methodology}
 
 \subsection{Data}
 
-The empirical analysis uses historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the early April 2023 ban. We leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Since GH Archive data does not include developers' location information, we infer user countries based on their public profiles, following the methods from prior research \cite{Kreitmeir2023}.
+The empirical analysis uses historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the early April 2023 ban. We leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Since GH Archive data does not include developers' location information, we infer users' countries based on their public profiles, following the methods from prior research \cite{Kreitmeir2023}. By analyzing \verb|PushEvent|s emitted by Italian developers, we can identify the corresponding commits and complement them with data from the GitHub REST API \cite{github_api}, to retrieve the number of lines of code added and deleted.
 
 \subsection{Control Group Selection}
 
@@ -91,10 +91,7 @@ To explore whether the ban's effects varied across different types of developers
   \label{tab:heterogeneity}
   \input{parts/did_heterogeneity_table}
   \par\vspace{0.1cm}
-  \begin{flushleft}
-    \footnotesize
-    \textit{Notes:} Activity groups defined by pre-ban commit volume tertiles. Standard errors clustered by user in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
-  \end{flushleft}
+  \textit{Notes:} Activity groups defined by pre-ban commit volume tertiles. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
 \end{table}
 
 The results show no statistically significant heterogeneity in the ban's impact across developer activity levels. For log additions, the treatment effects are 0.0238 (SE: 0.2172) for low-activity developers, 0.0741 (SE: 0.1085) for mid-activity developers, and 0.0016 (SE: 0.0560) for high-activity developers. For log deletions, the corresponding effects are -0.0908 (SE: 0.2145), -0.0196 (SE: 0.1068), and 0.0192 (SE: 0.0565) for low, mid, and high-activity developers, respectively. None of these coefficients are statistically significant at conventional levels.
