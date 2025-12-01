@@ -60,11 +60,18 @@ In contrast to the original study—which measured aggregate productivity throug
   \item \textbf{Pull Requests Opened}: The number of pull requests opened per developer per day, serving as a proxy for feature-level output.
 \end{itemize}
 
-All variables will be standardized at the developer-day level to account for individual differences in coding activity. We include user and date fixed effects in our regression specifications to control for unobserved heterogeneity across developers and time-invariant day-specific factors that may confound the treatment effect. User fixed effects account for individual developer characteristics (e.g., skill level, coding style, project preferences) that remain constant over time, while date fixed effects capture common temporal shocks affecting all developers on a given day (e.g., holidays, major technology events, or platform-wide changes). We also include an interaction term between Italy and a linear time trend (Italy × Trend) to account for potential differential pre-treatment trends between Italy and the control countries, though its coefficient is not reported in the results table as it is not of primary interest.
+\autoref{eq:did} represents the DiD specification used for our analyses. All variables will be standardized at the developer-day level to account for individual differences in coding activity. $Y_{it}$ denotes the outcome variable per user $i$ at time $t$. $D_{it}$ equals to $1$ for events made by users in the treatment group (Italy) during the first four weekdays, or the first two weeks after the ban, respectively. We include user and date fixed effects in our regression specifications to control for unobserved heterogeneity across developers and time-invariant day-specific factors that may confound the treatment effect. User fixed effects ($\alpha_{i}$) account for individual developer characteristics (e.g., skill level, coding style, project preferences) that remain constant over time, while date fixed effects ($\lambda_{t}$) capture common temporal shocks affecting all developers on a given day (e.g., holidays, major technology events, or platform-wide changes). We also include an interaction term between Italy and a linear time trend (Italy × Trend), represented as $\sigma_{d} \times t$ in the equation, to account for potential differential pre-treatment trends between Italy and the control countries, though its coefficient is not reported in the results table as it is not of primary interest. Standard errors $\varepsilon_{it}$ are clustered on the user-level.
+
+\begin{equation}
+  Y_{it} = \beta D_{it} + \alpha_{i} + \lambda_{t} + \sigma_{d} \times t + \varepsilon_{it}
+  \label{eq:did}
+\end{equation}
 
 To explore whether the ban's effects varied across different types of developers, we conduct a heterogeneity analysis by stratifying developers into activity groups based on pre-ban commit volume tertiles. This analysis allows us to examine whether developers with different baseline activity levels responded differently to the ban, which could provide insights into how AI tool usage patterns vary across developer types.
 
 \section{Results}
+
+
 
 \subsection{Code Volume Analysis}
 
@@ -76,7 +83,7 @@ We begin by examining the impact of the ChatGPT ban on developers' coding activi
   \label{tab:did-loc}
   \input{parts/did_regression_table}
   \par\vspace{0.1cm}
-  \textit{Note:} *** p$<$0.01, ** p$<$0.05, * p$<$0.1
+  \textit{Notes:} Absorbed fixed effects for users and dates. *** p$<$0.01, ** p$<$0.05, * p$<$0.1
 \end{table}
 
 The coefficient on ``Italy × Post-Ban'' represents the treatment effect of the ban on coding activity in Italy relative to the control countries (Austria and France). After controlling for user and date fixed effects, we find no statistically significant effects on either lines of code added or deleted in either time period. The coefficients are small in magnitude and not statistically significant at conventional levels. For log additions, the treatment effects are 0.0177 (SE: 0.0486) over the two-week period and 0.0542 (SE: 0.0527) over the four-weekday period. For log deletions, the corresponding effects are 0.0136 (SE: 0.0489) and 0.0326 (SE: 0.0524), respectively.
@@ -91,7 +98,8 @@ To explore whether the ban's effects varied across different types of developers
   \label{tab:heterogeneity}
   \input{parts/did_heterogeneity_table}
   \par\vspace{0.1cm}
-  \textit{Notes:} Activity groups defined by pre-ban commit volume tertiles. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+  \textit{Notes:} Activity groups defined by pre-ban commit volume tertiles. Absorbed fixed effects for users and dates.\\
+  *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
 \end{table}
 
 The results show no statistically significant heterogeneity in the ban's impact across developer activity levels. For log additions, the treatment effects are 0.0238 (SE: 0.2172) for low-activity developers, 0.0741 (SE: 0.1085) for mid-activity developers, and 0.0016 (SE: 0.0560) for high-activity developers. For log deletions, the corresponding effects are -0.0908 (SE: 0.2145), -0.0196 (SE: 0.1068), and 0.0192 (SE: 0.0565) for low, mid, and high-activity developers, respectively. None of these coefficients are statistically significant at conventional levels.
@@ -100,14 +108,14 @@ The results show no statistically significant heterogeneity in the ban's impact 
 
 To further examine the causal relationship, we analyze the period following the ban's lift on April 28, 2023. Table~\ref{tab:did-lift} presents difference-in-differences estimates comparing coding activity before and after the ban was lifted. The coefficient on ``Italy × Post-Lift'' represents whether developers in Italy experienced a rebound in coding activity relative to the control countries once ChatGPT access was restored.
 
-\begin{table}[htbp]
-  \centering
-  \caption{Difference-in-Differences Results: Post-Ban Lift (Absorbed Fixed Effects)}
-  \label{tab:did-lift}
-  \input{parts/ban_lift_regression_table}
-  \par\vspace{0.1cm}
-  \textit{Note:} *** p$<$0.01, ** p$<$0.05, * p$<$0.1
-\end{table}
+% \begin{table}[htbp]
+%   \centering
+%   \caption{Difference-in-Differences Results: Post-Ban Lift (Absorbed Fixed Effects)}
+%   \label{tab:did-lift}
+%   \input{parts/ban_lift_regression_table}
+%   \par\vspace{0.1cm}
+%   \textit{Note:} *** p$<$0.01, ** p$<$0.05, * p$<$0.1
+% \end{table}
 
 We find no statistically significant effects in any of the specifications. The coefficients on ``Italy × Post-Lift'' are small in magnitude and not statistically significant for both LOC added and deleted, across both the two-week and four-weekday time windows. 
 
@@ -121,7 +129,7 @@ To address RQ2, we examine the impact of the ChatGPT ban on the number of pull r
   \label{tab:did-prs-opened}
   \input{parts/prs_opened_did_table}
   \par\vspace{0.1cm}
-  \textit{Note:} *** p$<$0.01, ** p$<$0.05, * p$<$0.1
+  \textit{Notes:} Absorbed fixed effects for users and dates. *** p$<$0.01, ** p$<$0.05, * p$<$0.1
 \end{table}
 
 ``Italy × Post-Ban'' captures the treatment effect of the ban on pull request activity in Italy relative to the control countries (Austria and France). The results show no statistically significant effects on pull requests opened in the two-week period. For the four-weekday period, we observe a treatment effect of 0.0326 (SE: 0.0524), which is statistically significant at the 10\% level (p$=$0.0897).
