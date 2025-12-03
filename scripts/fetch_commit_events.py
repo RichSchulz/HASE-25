@@ -1,3 +1,7 @@
+"""
+Fetch PushEvents from GH Archive and save them to a csv file.
+"""
+
 import os
 import pandas as pd
 from datetime import datetime, timedelta
@@ -151,7 +155,7 @@ def main():
     try:
         country = "france" # Change as needed
         out_dir = "large_data"
-        csv_file = f"new__commits_all_{country}.csv"
+        csv_file = f"commits_all_{country}.csv"
 
         user_table_id = f"hase-25-project.users.{country}" 
         

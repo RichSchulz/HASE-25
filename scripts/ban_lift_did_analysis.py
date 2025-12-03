@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 """
 Difference-in-Differences Analysis: Post-Ban Lift
-Analyzes commit activity changes after the ChatGPT ban was lifted (April 28, 2023),
+Analyzes commit activity changes (loc added, deleted, changed)
+after the ChatGPT ban was lifted (April 28, 2023),
 comparing activity during the ban with activity after the ban was lifted.
 Italy as treatment group and Austria/France as control groups.
 Uses absorbed fixed effects (user and date) with clustered standard errors by user.
@@ -11,12 +11,11 @@ import pandas as pd
 import numpy as np
 import sqlite3
 from linearmodels.iv import AbsorbingLS
-from typing import cast
 
 
 def load_and_prepare_data():
     """
-    OPTIMIZATION: Filter by date inside SQL to avoid loading massive history.
+    Filter by date inside SQL to avoid loading massive history.
     """
     print("Loading commit data from SQLite database...")
     
@@ -129,7 +128,7 @@ def prepare_did_variables(
 
 def run_regression(df, outcome_var, outcome_name):
     """
-    Absorbs Fixed Effects instead of creating dummy columns.
+    Run regression with absorbed fixed effects for user and date
     """
     print(f"\nRunning Regression for: {outcome_name}")
     

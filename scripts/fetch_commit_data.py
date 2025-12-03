@@ -1,7 +1,16 @@
+"""
+Fetch commits from GitHub Rest API using multiple threads and multiple personal access tokens.
+Track completed downloads in a sqlite table to make script resumable. Handle waiting when
+rate limit is reached.
+Stores results in a more lightweight form (including loc added / deleted) and in a form that
+inlcludes the actual patches from the commits.
+(Fetches commits from users which are located in Italy, Austria or France)
+"""
+
 from dataclasses import dataclass
 import os
 import time
-from typing import Any, Optional
+from typing import Any
 import requests
 from dotenv import load_dotenv
 import pandas as pd

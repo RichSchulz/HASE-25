@@ -1,3 +1,7 @@
+"""
+Merge data from csv files specified into one sqlite database.
+"""
+
 import pandas as pd
 import sqlite3
 import os

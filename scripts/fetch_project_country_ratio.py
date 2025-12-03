@@ -1,3 +1,9 @@
+"""
+Fetch PushEvents from GH Archive, from repositories where at least 25% of the commits
+during a given timeframe have been made by contributors based in Italy, and save them
+to a csv file.
+"""
+
 import os
 import pandas as pd
 from datetime import datetime

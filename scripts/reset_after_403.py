@@ -1,3 +1,8 @@
+"""
+Manually reset download progress, which was necessary due to a bug in the script
+which occured temporarily.
+"""
+
 import sqlite3
 
 

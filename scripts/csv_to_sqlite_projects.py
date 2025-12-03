@@ -1,3 +1,7 @@
+"""
+Merge data from manually picked projects from csv files specified into one sqlite database.
+"""
+
 import pandas as pd
 import sqlite3
 import os
@@ -23,7 +27,7 @@ def df_to_sqlite(df: pd.DataFrame, sqlite_db: str, table_name: str):
     conn = sqlite3.connect(sqlite_db)
     # df.to_sql(table_name, conn, if_exists='replace', index=True, index_label='id')
 
-    # Doing what `to_sql`` does internally, but allow setting keys, which is not possible via `to_sql`
+    # Doing what `to_sql` does internally, but allow setting keys, which is not possible via `to_sql`
     db = SQLiteDatabase(conn)
     table = SQLiteTable(table_name, db, frame=df, if_exists='replace', index=True, index_label='id', keys=['id'])
     table.create()
@@ -53,7 +57,6 @@ def commits_to_sqlite():
             merged = pd.concat([merged, country_df], ignore_index=True)
 
     if merged is not None:
-        # df_to_sqlite(merged.head(100), "large_data/commits_all_sample.sqlite3", 'commits')
         df_to_sqlite(merged, "large_data/commits_projects.sqlite3", 'commits')
 
 

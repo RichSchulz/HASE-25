@@ -1,3 +1,8 @@
+"""
+Fetch ReleaseEvents from GH Archive and save them to a csv file.
+This is part of the replication of https://arxiv.org/abs/2304.09339
+"""
+
 import os
 import pandas as pd
 from datetime import datetime, timedelta
@@ -100,7 +105,7 @@ def main():
     try:
         country = "france" # Change as needed
         out_dir = "data"
-        csv_file = f"new__release_all_{country}.csv"
+        csv_file = f"release_all_{country}.csv"
 
         user_table_id = f"hase-25-project.users.{country}" 
         

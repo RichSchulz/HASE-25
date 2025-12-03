@@ -1,6 +1,7 @@
-#!/usr/bin/env python3
 """
-Difference-in-Differences Analysis (Optimized)
+Difference-in-Differences Analysis on LOC Added, Deleted and Total Changes.
+Analyzes data 4 weeks prior to the ban and then for both a 2 week period into the ban
+and a 4 work-day period into the ban.
 """
 
 import pandas as pd

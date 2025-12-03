@@ -1,6 +1,11 @@
+"""
+Fetches events from GH Archive for some manually selected projects in Italy, which show a high
+percentage of Italian developers and high coding activity.
+"""
+
 import os
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from google.cloud import bigquery
 from dotenv import load_dotenv
 import sys

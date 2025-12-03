@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-Difference-in-Differences Analysis with Heterogeneity (Activity Volume)
+Difference-in-Differences Analysis on LOC Added, Deleted and Total Changes with Heterogeneity.
 Splits users into Low/Mid/High activity tertiles based on pre-ban behavior.
 """
 
@@ -16,9 +15,6 @@ from typing import cast
 DB_PATH = "large_data/data_commits.sqlite3"
 OUTPUT_PATH = "../final report/parts/did_heterogeneity_table.tex"
 MIN_PRE_PERIOD_COMMITS = 0  # Minimum commits required to be included in analysis (0 = include all users)
-# NOTE: Set to 0 to include ALL users (matches simple_did_analysis.py sample).
-# Set to 5+ to filter to only "active" users. This allows comparison of results with/without
-# the activity filter to see if effects are concentrated among active users.
 # =================================================
 
 def load_data():
@@ -282,8 +278,6 @@ def export_heterogeneity_table(results_map, filepath, treatment_period='two_week
                     obs_str += " & -"
         f.write(obs_str + r" \\" + "\n")
         
-        f.write(r"User FE & Yes & Yes & Yes & Yes & Yes & Yes \\" + "\n")
-        f.write(r"Date FE & Yes & Yes & Yes & Yes & Yes & Yes \\" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r"\end{tabular}" + "\n")
 
