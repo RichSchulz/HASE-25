@@ -1,3 +1,7 @@
+"""
+Reset started_at in download progress for all commits.
+"""
+
 import sqlite3
 
 

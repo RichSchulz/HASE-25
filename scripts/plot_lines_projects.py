@@ -1,6 +1,10 @@
+"""
+Plot LOC added and deleted, as well as commit volume, of some manually selected Italian projects.
+"""
+
 import pandas as pd
 import os
-from typing import cast, Any
+from typing import cast
 import matplotlib.pyplot as plt
 import sqlite3
 

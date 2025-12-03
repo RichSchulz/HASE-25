@@ -1,9 +1,15 @@
+"""
+Aggregates commit events from users in italy by repository and creates sums for the
+total number of commits and unique users per repository.
+Includes data from the first week of the ban only.
+"""
+
 import os
 import sys
 import pandas as pd
 
 INPUT_PATH = "large_data/commits_all_italy.csv"
-OUTPUT_PATH = "data/italy_projects_fulltime.csv"
+OUTPUT_PATH = "data/italy_projects.csv"
 
 
 def main():
@@ -20,8 +26,8 @@ def main():
         pd.DataFrame(columns=[
             "repository_name",
             "repository_id",
-            "num_commits",
-            "num_unique_users",
+            "num_commits_during_ban",
+            "num_unique_users_during_ban",
         ]).to_csv(OUTPUT_PATH, index=False)
         print(f"✅ Wrote empty summary to: {OUTPUT_PATH}")
         return
@@ -36,31 +42,35 @@ def main():
     # Parse timestamp and filter to ban window (inclusive)
     df = df.copy()
     df["event_timestamp"] = pd.to_datetime(df["event_timestamp"], errors="coerce", utc=True)
+    start = pd.Timestamp("2023-04-01", tz="UTC")
+    end = pd.Timestamp("2023-04-07 23:59:59", tz="UTC")
+    mask = (df["event_timestamp"] >= start) & (df["event_timestamp"] <= end)
+    ban_df = df.loc[mask]
 
-    if df.empty:
+    if ban_df.empty:
         print("⚠️ No commits found in the ban window (2023-04-01 to 2023-04-07).")
         os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
         pd.DataFrame(columns=[
             "repository_name",
             "repository_id",
-            "num_commits",
-            "num_unique_users",
+            "num_commits_during_ban",
+            "num_unique_users_during_ban",
         ]).to_csv(OUTPUT_PATH, index=False)
         print(f"✅ Wrote empty summary to: {OUTPUT_PATH}")
         return
 
     grouped = (
-        df.groupby(["repository_id", "repository_name"], dropna=False)
+        ban_df.groupby(["repository_id", "repository_name"], dropna=False)
         .agg(
-            num_commits=("commit_sha", "size"),
-            num_unique_users=("username", pd.Series.nunique),
+            num_commits_during_ban=("commit_sha", "size"),
+            num_unique_users_during_ban=("username", pd.Series.nunique),
         )
         .reset_index()
     )
 
     # Sort by distinct users desc, then commits desc
     grouped = grouped.sort_values(
-        by=["num_unique_users", "num_commits"], ascending=[False, False]
+        by=["num_unique_users_during_ban", "num_commits_during_ban"], ascending=[False, False]
     )
 
     # Write output

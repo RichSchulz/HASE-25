@@ -1,3 +1,7 @@
+"""
+Plot number of commits of some manually selected, representative Italian projects.
+"""
+
 import pandas as pd
 import os
 from typing import cast, Any
@@ -126,6 +130,8 @@ def main():
     )
     df_events = filter_events(df_events=df_events)
 
+    # Use this to first filter projects cased on min_commits and min_ratio
+
     # df_ratios = csv_to_df(
     #     csv_file=f"large_data/projects_ratio_{country}.csv",
     #     extra_columns={}
@@ -138,6 +144,8 @@ def main():
     # df_ratios["repo_url"] = "https://github.com/" + df_ratios["repo"]
     # df_ratios.to_csv(f"data/filtered_projects_{country}.csv", index=False)
 
+    # Then, projects have been manually selected in filtered_manually_projects_italy.csv
+
     df_ratios_manually_filtered = csv_to_df(
         csv_file=f"data/filtered_manually_projects_{country}.csv",
         extra_columns={}
@@ -146,18 +154,18 @@ def main():
 
     print(f"Count of manually filtered projects: {len(df_ratios_manually_filtered)}")
 
-    # df = merge_ratios(
-    #     df_events=df_events,
-    #     df_ratios=df_ratios_manually_filtered
-    # )
-    # df.to_csv(f"data/only_filtered_manually_projects_{country}.csv", index=False)
+    df = merge_ratios(
+        df_events=df_events,
+        df_ratios=df_ratios_manually_filtered
+    )
+    df.to_csv(f"data/only_filtered_manually_projects_{country}.csv", index=False)
     
-    # df_daily = aggregate_commits_per_project(df=df)
-    # plot_commits_per_day(
-    #     daily_total=df_daily,
-    #     country=country,
-    #     output_file=f"data/commits_per_day_{country}_1y.png"
-    # )
+    df_daily = aggregate_commits_per_project(df=df)
+    plot_commits_per_day(
+        daily_total=df_daily,
+        country=country,
+        output_file=f"data/commits_per_day_{country}.png"
+    )
 
 
 if __name__ == "__main__":

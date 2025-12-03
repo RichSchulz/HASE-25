@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 """
-Difference-in-Differences Analysis: Post-Ban Lift (Optimized)
-Analyzes commit activity changes after the ChatGPT ban was lifted (April 28, 2023),
+Difference-in-Differences Analysis: Post-Ban Lift
+Analyzes commit activity changes (loc added, deleted, changed)
+after the ChatGPT ban was lifted (April 28, 2023),
 comparing activity during the ban with activity after the ban was lifted.
 Italy as treatment group and Austria/France as control groups.
 Uses absorbed fixed effects (user and date) with clustered standard errors by user.
@@ -10,29 +10,12 @@ Uses absorbed fixed effects (user and date) with clustered standard errors by us
 import pandas as pd
 import numpy as np
 import sqlite3
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from datetime import timedelta
-import warnings
-import gc
+from linearmodels.iv import AbsorbingLS
 
-# OPTIMIZATION: Use linearmodels for efficient Fixed Effects
-try:
-    from linearmodels.iv import AbsorbingLS
-    LINEARMODELS_AVAILABLE = True
-except ImportError:
-    LINEARMODELS_AVAILABLE = False
-    print("CRITICAL WARNING: 'linearmodels' not installed.")
-    print("Please run: pip install linearmodels")
-    print("Falling back to slow statsmodels (Script may crash on large data).")
-    from statsmodels.formula.api import ols
 
-warnings.filterwarnings('ignore')
-
-def load_and_prepare_data(ban_period_weeks=4):
+def load_and_prepare_data():
     """
-    OPTIMIZATION: Filter by date inside SQL to avoid loading massive history.
-    Ban lift date is 2023-04-28. We need roughly March 1st to May 15th.
+    Filter by date inside SQL to avoid loading massive history.
     """
     print("Loading commit data from SQLite database...")
     
@@ -46,7 +29,6 @@ def load_and_prepare_data(ban_period_weeks=4):
 
     conn = sqlite3.connect(db_path)
     
-    # OPTIMIZATION: WHERE clause added
     query = f"""
     SELECT 
         country,
@@ -66,54 +48,34 @@ def load_and_prepare_data(ban_period_weeks=4):
     print(f"Total commits loaded (filtered by date in SQL): {len(df)}")
     return df
 
-def prepare_did_variables(df, treatment_period='two_weeks', ban_period_weeks=4):
+def prepare_did_variables(
+        df: pd.DataFrame,
+        ban_start: pd.Timestamp,
+        ban_end: pd.Timestamp,
+        lift_start: pd.Timestamp,
+        lift_end: pd.Timestamp,
+        check_weekday: bool
+):
     """
-    Prepare variables for difference-in-differences analysis (post-ban lift) with memory optimization
-    
-    Parameters:
-    -----------
-    treatment_period : str
-        'two_weeks' : First two weeks after ban lift (April 29 - May 12, 2023)
-        'four_weekdays' : First 4 weekdays after ban lift (May 1-4, 2023, since April 29 was Saturday)
-    ban_period_weeks : int
-        Number of weeks during the ban to include as pre-period (default: 4)
-        This uses the last N weeks of the ban period (April 1-28, 2023) as the pre-period
+    Prepare variables for difference-in-differences analysis (post-ban lift)
     """
-    print(f"Preparing DiD variables for treatment period: {treatment_period}...")
-    print(f"Using {ban_period_weeks} weeks during ban as pre-period")
+
+    ban_start_date = ban_start.date()
+    ban_end_date = ban_end.date()
+    lift_start_date = lift_start.date()
+    lift_end_date = lift_end.date()
     
     # Optimize datatypes
     df['event_timestamp'] = pd.to_datetime(df['push_event_timestamp'])
     
-    # OPTIMIZATION: Use float32 to save 50% RAM on numbers
     cols = ['additions', 'deletions', 'changes']
     for c in cols:
-        df[c] = pd.to_numeric(df[c], errors='coerce').astype('float32')
+        df[c] = pd.to_numeric(df[c], errors='coerce')
         
     df = df.dropna(subset=['additions', 'username', 'country', 'event_timestamp'])
     df['date'] = df['event_timestamp'].dt.date
     
-    # Define key dates
-    ban_end = pd.Timestamp('2023-04-28').date()  # Ban lifted on April 28
-    lift_date = pd.Timestamp('2023-04-29').date()  # First day after ban lift
-    
-    # Calculate ban period to use (last N weeks of ban)
-    ban_period_start = ban_end - timedelta(weeks=ban_period_weeks) + timedelta(days=1)
-    print(f"Pre-period (during ban): {ban_period_start} to {ban_end} ({ban_period_weeks} weeks during ban)")
-    
-    # Filter Logic
-    if treatment_period == 'two_weeks':
-        # First two weeks after ban lift: April 29 - May 12, 2023
-        post_lift_end = lift_date + timedelta(weeks=2)
-        mask = (df['date'] >= ban_period_start) & (df['date'] < post_lift_end)
-        print(f"Filtered to {ban_period_weeks} weeks during ban and 2 weeks after lift")
-    elif treatment_period == 'four_weekdays':
-        # First 4 weekdays after ban lift: May 1-4, 2023
-        may_5th = pd.Timestamp('2023-05-05').date()
-        mask = (df['date'] >= ban_period_start) & (df['date'] < may_5th)
-        print(f"Filtered to {ban_period_weeks} weeks during ban and first 4 weekdays after lift")
-    
-    df = df[mask].copy()
+    df = df[(df['date'] >= ban_start_date) & (df['date'] < lift_end_date)].copy()
     
     # Aggregate
     print("Aggregating commits by user and date...")
@@ -129,21 +91,19 @@ def prepare_did_variables(df, treatment_period='two_weeks', ban_period_weeks=4):
     # Variables
     daily_user_stats['treatment'] = (daily_user_stats['country'].str.lower() == 'italy').astype(int)
     daily_user_stats['date_dt'] = pd.to_datetime(daily_user_stats['date'])
-    
-    # Post-lift logic
-    if treatment_period == 'two_weeks':
-        # Post-lift: April 29 - May 12, 2023
-        post_lift_end = lift_date + timedelta(weeks=2)
-        daily_user_stats['post_lift'] = ((daily_user_stats['date'] >= lift_date) & 
-                                         (daily_user_stats['date'] < post_lift_end)).astype(int)
-    elif treatment_period == 'four_weekdays':
-        # Post-lift: Only May 1-4, 2023 (first 4 weekdays after lift)
-        may_1st = pd.Timestamp('2023-05-01').date()
-        may_5th = pd.Timestamp('2023-05-05').date()
+
+    if check_weekday:
         daily_user_stats['is_weekday'] = (daily_user_stats['date_dt'].dt.dayofweek < 5).astype(int)
-        daily_user_stats['post_lift'] = ((daily_user_stats['date'] >= may_1st) & 
-                                        (daily_user_stats['date'] < may_5th) &
-                                        (daily_user_stats['is_weekday'] == 1)).astype(int)
+        daily_user_stats['post_lift'] = (
+            (daily_user_stats['date'] >= lift_start_date) & 
+            (daily_user_stats['date'] < lift_end_date) &
+            (daily_user_stats['is_weekday'] == 1)
+        ).astype(int)
+    else:
+        daily_user_stats['post_lift'] = (
+            (daily_user_stats['date'] >= lift_start_date) & 
+            (daily_user_stats['date'] < lift_end_date)
+        ).astype(int)
     
     daily_user_stats['treatment_post'] = daily_user_stats['treatment'] * daily_user_stats['post_lift']
     
@@ -166,47 +126,42 @@ def prepare_did_variables(df, treatment_period='two_weeks', ban_period_weeks=4):
     
     return daily_user_stats
 
-def run_fast_regression(df, outcome_var, outcome_name):
+def run_regression(df, outcome_var, outcome_name):
     """
-    OPTIMIZATION: Uses linearmodels AbsorbingLS for speed.
-    Absorbs Fixed Effects instead of creating dummy columns.
+    Run regression with absorbed fixed effects for user and date
     """
-    print(f"\nRunning Fast Regression for: {outcome_name}")
+    print(f"\nRunning Regression for: {outcome_name}")
     
-    if LINEARMODELS_AVAILABLE:
-        # Prepare data for Linearmodels
-        # We need to separate the "absorbed" effects (FE) from the regressors
+    # Prepare data for Linearmodels
+    # We need to separate the "absorbed" effects (FE) from the regressors
+    
+    # 1. Define Fixed Effects (Absorb)
+    # 'date' + 'username' is standard TWFE.
+    absorb_cols = ['username', 'date'] 
+    
+    # 2. Define Regressors (X)
+    # We need the interaction (DiD estimator) and the group-specific trend
+    exog_vars = ['treatment_post', 'treatment_time_trend']
+    
+    # 3. Define Dependent (Y)
+    y = df[outcome_var]
+    X = df[exog_vars]
+    
+    print(f"Absorbing {df['username'].nunique()} users and {df['date'].nunique()} dates...")
+    
+    try:
+        # clusters should be series or dataframe
+        model = AbsorbingLS(y, X, absorb=df[absorb_cols])
         
-        # 1. Define Fixed Effects (Absorb)
-        # 'date' + 'username' is standard TWFE.
-        absorb_cols = ['username', 'date'] 
+        # Clustered standard errors
+        results = model.fit(cov_type='clustered', clusters=df[['username']])
         
-        # 2. Define Regressors (X)
-        # We need the interaction (DiD estimator) and the group-specific trend
-        exog_vars = ['treatment_post', 'treatment_time_trend']
+        return results
         
-        # 3. Define Dependent (Y)
-        y = df[outcome_var]
-        X = df[exog_vars]
-        
-        print(f"Absorbing {df['username'].nunique()} users and {df['date'].nunique()} dates...")
-        
-        try:
-            # clusters should be series or dataframe
-            model = AbsorbingLS(y, X, absorb=df[absorb_cols])
-            
-            # Clustered standard errors
-            results = model.fit(cov_type='clustered', clusters=df[['username']])
-            
-            return results
-            
-        except Exception as e:
-            print(f"Linearmodels failed: {e}")
-            raise
-    else:
-        # Fallback to the slow original method if library missing
-        formula = f"{outcome_var} ~ treatment_post + treatment_time_trend + C(username) + C(date)"
-        return ols(formula, data=df).fit().get_robustcov_results(cov_type='cluster', groups=df['username'])
+    except Exception as e:
+        print(f"Linearmodels failed: {e}")
+        raise
+
 
 def export_results_latex(results_dict, output_path):
     """Simple custom LaTeX table generator for linearmodels results"""
@@ -273,57 +228,57 @@ def export_results_latex(results_dict, output_path):
                 
         f.write(row_obs + r" \\" + "\n")
         f.write(row_r2 + r" \\" + "\n")
-        f.write(r"User FE & Yes & Yes & Yes & Yes \\" + "\n")
-        f.write(r"Date FE & Yes & Yes & Yes & Yes \\" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r"\end{tabular}" + "\n")
 
 def main():
-    try:
-        # 1. Load Data (Optimized SQL)
-        df_raw = load_and_prepare_data()
-        
-        models_dict = {}
-        treatment_periods = ['two_weeks', 'four_weekdays']
-        outcomes = {'log_additions': 'Log Additions', 'log_deletions': 'Log Deletions'}
-        
-        print("\n" + "="*80)
-        print("RUNNING DIFFERENCE-IN-DIFFERENCES ANALYSES: POST-BAN LIFT")
-        print("="*80)
-        
-        # 2. Run Analysis
-        for period in treatment_periods:
-            print(f"\n{'='*80}")
-            print(f"TREATMENT PERIOD: {period.upper().replace('_', ' ')}")
-            print(f"{'='*80}")
-            
-            # Prepare specific slice (cheap operation now that df_raw is smaller)
-            df = prepare_did_variables(df_raw.copy(), treatment_period=period, ban_period_weeks=4)
-            
-            for outcome_var, outcome_name in outcomes.items():
-                print(f"\n{'-'*60}")
-                print(f"OUTCOME: {outcome_name}")
-                print(f"{'-'*60}")
-                
-                # Run Optimized Regression
-                res = run_fast_regression(df, outcome_var, outcome_name)
-                models_dict[(outcome_var, period)] = res
-                
-                # Print Quick Summary
-                print(res.summary)
-        
-        # 3. Export Table
-        output_path = "../final report/parts/ban_lift_regression_table.tex"
-        export_results_latex(models_dict, output_path)
-        
+    # Load Data
+    df_raw = load_and_prepare_data()
+    
+    models_dict = {}
+    treatment_periods = ['two_weeks', 'four_weekdays']
+    outcomes = {'log_additions': 'Log Additions', 'log_deletions': 'Log Deletions'}
+    
+    print("\n" + "="*80)
+    print("RUNNING DIFFERENCE-IN-DIFFERENCES ANALYSES: POST-BAN LIFT")
+    print("="*80)
+    
+    # Run Analysis
+    for period in treatment_periods:
         print(f"\n{'='*80}")
-        print("ANALYSIS COMPLETE!")
+        print(f"TREATMENT PERIOD: {period.upper().replace('_', ' ')}")
         print(f"{'='*80}")
         
-    except Exception as e:
-        print(f"Error during analysis: {str(e)}")
-        raise
+        # Prepare specific slice (cheap operation now that df_raw is smaller)
+        df = prepare_did_variables(
+            df_raw.copy(),
+            ban_start=pd.Timestamp('2023-04-01'),
+            ban_end=pd.Timestamp('2023-04-28'),
+            lift_start=pd.Timestamp('2023-04-29') if period == 'two_weeks' else pd.Timestamp('2023-05-01'),
+            lift_end=pd.Timestamp('2023-05-13') if period == 'two_weeks' else pd.Timestamp('2023-05-05'),
+            check_weekday=True if period == 'four_weekdays' else False
+        )
+        
+        for outcome_var, outcome_name in outcomes.items():
+            print(f"\n{'-'*60}")
+            print(f"OUTCOME: {outcome_name}")
+            print(f"{'-'*60}")
+            
+            # Run Regression
+            res = run_regression(df, outcome_var, outcome_name)
+            models_dict[(outcome_var, period)] = res
+            
+            # Print Quick Summary
+            print(res.summary)
+    
+    # Export Table
+    output_path = "../final report/parts/ban_lift_regression_table.tex"
+    export_results_latex(models_dict, output_path)
+    
+    print(f"\n{'='*80}")
+    print("ANALYSIS COMPLETE!")
+    print(f"{'='*80}")
+
 
 if __name__ == "__main__":
     main()
-

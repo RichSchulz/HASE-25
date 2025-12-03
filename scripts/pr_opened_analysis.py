@@ -1,3 +1,10 @@
+"""
+Difference-in-Differences Analysis of the number of pull requests opened.
+Includes data from Italy (treatment group) and Austria/France (control group).
+Analyzes data 4 weeks prior to the ban and then for both a 2 week period into the ban
+and a 4 work-day period into the ban.
+"""
+
 import pandas as pd
 import numpy as np
 import os
@@ -213,8 +220,6 @@ def export_results_latex(results_dict, output_path):
                 
         f.write(row_obs + r" \\" + "\n")
         f.write(row_r2 + r" \\" + "\n")
-        f.write(r"User FE & Yes & Yes \\" + "\n")
-        f.write(r"Date FE & Yes & Yes \\" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r"\end{tabular}" + "\n")
 

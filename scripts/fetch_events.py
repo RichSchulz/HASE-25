@@ -1,6 +1,10 @@
+"""
+Fetch events of all types from GH Archive and save them to a csv file.
+"""
+
 import os
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from google.cloud import bigquery
 from dotenv import load_dotenv
 import sys

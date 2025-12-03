@@ -1,3 +1,7 @@
+"""
+Plot the body length of issues to check for interesting changes.
+"""
+
 import pandas as pd
 import os
 from typing import Any, cast
@@ -61,7 +65,7 @@ def prepare_issue_events(df: pd.DataFrame):
     return df
 
 
-def plot_release_events(df: pd.DataFrame, resample_freq: str = "W"):
+def plot_issue_events(df: pd.DataFrame, resample_freq: str = "W"):
     df = df.copy()
     df['event_date'] = pd.to_datetime(df['event_date'])
 
@@ -102,7 +106,7 @@ def plot_release_events(df: pd.DataFrame, resample_freq: str = "W"):
 def main():
     df = read_and_merge_dfs()
     df = prepare_issue_events(df)
-    plot_release_events(df)
+    plot_issue_events(df)
 
 
 if __name__ == "__main__":

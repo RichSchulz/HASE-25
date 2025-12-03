@@ -1,3 +1,9 @@
+"""
+DiD analysis of the probability that ReleaseEvents occured after then ChatGPT ban
+in Italy, using data from Austria and France as control groups.
+This is part of the replication of https://arxiv.org/abs/2304.09339
+"""
+
 import pandas as pd
 import os
 from typing import Any, cast

@@ -1,6 +1,8 @@
-import os
-import pandas as pd
-from datetime import datetime, timedelta
+"""
+Get the total number of users in each country analyzed from our
+custom BigQuery table.
+"""
+
 from google.cloud import bigquery
 from dotenv import load_dotenv
 import sys

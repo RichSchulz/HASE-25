@@ -1,23 +1,19 @@
-#!/usr/bin/env python3
 """
-Difference-in-Differences Analysis (Optimized)
+Difference-in-Differences Analysis on LOC Added, Deleted and Total Changes.
+Analyzes data 4 weeks prior to the ban and then for both a 2 week period into the ban
+and a 4 work-day period into the ban.
 """
 
 import pandas as pd
 import numpy as np
 import sqlite3
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from datetime import timedelta
-import warnings
-import gc
 from linearmodels.iv import AbsorbingLS
 from typing import cast
 
 
 def load_and_prepare_data():
     """
-    OPTIMIZATION: Filter by date inside SQL to avoid loading massive history.
+    Filter by date inside SQL to avoid loading massive history.
     """
     print("Loading commit data from SQLite database...")
     
@@ -31,7 +27,6 @@ def load_and_prepare_data():
 
     conn = sqlite3.connect(db_path)
     
-    # OPTIMIZATION: WHERE clause added
     query = f"""
     SELECT 
         country,
@@ -59,7 +54,9 @@ def prepare_did_variables(
         treatment_end: pd.Timestamp,
         check_weekday: bool
 ):
-    """Prepare variables for DiD analysis with memory optimization"""
+    """
+    Prepare variables for DiD analysis with memory optimization
+    """
 
     pre_start_date = pre_start.date()
     pre_end_date = pre_end.date()
@@ -125,19 +122,17 @@ def prepare_did_variables(
     
     return daily_user_stats
 
-def run_fast_regression(df, outcome_var, outcome_name):
+def run_regression(df, outcome_var, outcome_name):
     """
-    OPTIMIZATION: Uses linearmodels AbsorbingLS for speed.
-    Absorbs Fixed Effects instead of creating dummy columns.
+    Run regression with absorbed fixed effects for user and date
     """
-    print(f"\nRunning Fast Regression for: {outcome_name}")
+    print(f"\nRunning Regression for: {outcome_name}")
     
     # Prepare data for Linearmodels
     # We need to separate the "absorbed" effects (FE) from the regressors
     
     # 1. Define Fixed Effects (Absorb)
-    # Note: 'date' absorbs 'day_of_week', so we don't need both strictly, 
-    # but we can include day_of_week if needed. 'date' + 'username' is standard TWFE.
+    # 'date' + 'username' is standard TWFE.
     absorb_cols = ['username', 'date'] 
     
     # 2. Define Regressors (X)
@@ -147,10 +142,7 @@ def run_fast_regression(df, outcome_var, outcome_name):
     # 3. Define Dependent (Y)
     y = df[outcome_var]
     X = df[exog_vars]
-    
-    # Ensure constant is handled (AbsorbingLS usually centers data, but we can add constant if needed)
-    # For pure DiD with FE, we care about the slope of interaction.
-    
+        
     print(f"Absorbing {df['username'].nunique()} users and {df['date'].nunique()} dates...")
     
     try:
@@ -226,26 +218,23 @@ def export_results_latex(results_dict, output_path):
                 
         f.write(row_obs + r" \\" + "\n")
         f.write(row_r2 + r" \\" + "\n")
-        f.write(r"User FE & Yes & Yes & Yes & Yes \\" + "\n")
-        f.write(r"Date FE & Yes & Yes & Yes & Yes \\" + "\n")
         f.write(r"\hline \hline" + "\n")
         f.write(r"\end{tabular}" + "\n")
 
-# Re-use the plotting functions from original script (omitted here for brevity, they were fine)
-def plot_lines_added_before_after(df):
-    # (Keep your original plotting code here, it performs fine on aggregated data)
-    pass
-
 def main():
-    # 1. Load Data (Optimized SQL)
+    # Load Data
     df_raw = load_and_prepare_data()
     
     models_dict = {}
     treatment_periods = ['two_weeks', 'four_weekdays']
     outcomes = {'log_additions': 'Log Additions', 'log_deletions': 'Log Deletions'}
     
-    # 2. Run Analysis
+    # Run Analysis
     for period in treatment_periods:
+        print(f"\n{'='*80}")
+        print(f"TREATMENT PERIOD: {period.upper().replace('_', ' ')}")
+        print(f"{'='*80}")
+
         # Prepare specific slice (cheap operation now that df_raw is smaller)
         df = prepare_did_variables(
             df_raw.copy(),
@@ -257,38 +246,25 @@ def main():
         )
         
         for outcome_var, outcome_name in outcomes.items():
+            print(f"\n{'-'*60}")
+            print(f"OUTCOME: {outcome_name}")
+            print(f"{'-'*60}")
+    
             # Run Optimized Regression
-            res = run_fast_regression(df, outcome_var, outcome_name)
+            res = run_regression(df, outcome_var, outcome_name)
             models_dict[(outcome_var, period)] = res
             
             # Print Quick Summary
             print(res.summary)
             
-    # 3. Export Table
+    # Export Table
     output_path = "../final report/parts/did_regression_table.tex"
     export_results_latex(models_dict, output_path)
-    
-    # 4. Plotting
-    # Prepare data specifically for plotting (wider window)
-    # print("Generating plots...")
-    # df_plot_two_weeks = prepare_did_variables(
-    #     df_raw.copy(),
-    #     pre_start=cast(pd.Timestamp, pd.Timestamp('2023-03-04')),
-    #     pre_end=cast(pd.Timestamp, pd.Timestamp('2023-03-31')),
-    #     treatment_start=cast(pd.Timestamp, pd.Timestamp('2023-04-01')),
-    #     treatment_end=cast(pd.Timestamp, pd.Timestamp('2023-04-15')),
-    #     check_weekday=False,
-    # )
-    # df_plot_four_weekdays = prepare_did_variables(
-    #     df_raw.copy(),
-    #     pre_start=cast(pd.Timestamp, pd.Timestamp('2023-03-04')),
-    #     pre_end=cast(pd.Timestamp, pd.Timestamp('2023-03-31')),
-    #     treatment_start=cast(pd.Timestamp, pd.Timestamp('2023-04-03')),
-    #     treatment_end=cast(pd.Timestamp, pd.Timestamp('2023-04-07')),
-    #     check_weekday=True,
-    # )
-    # Call your plotting functions here...
-    # plot_lines_added_before_after(df_plot)
+
+    print(f"\n{'='*80}")
+    print("ANALYSIS COMPLETE!")
+    print(f"{'='*80}")
+
 
 if __name__ == "__main__":
     main()
