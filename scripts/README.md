@@ -1,70 +1,10 @@
-# ChatGPT Ban Analysis
+# Scripts for the paper "An Empirical Analysis of ChatGPT's Impact on Developer Productivity Using Italy's ChatGPT Ban as a Natural Experiment"
 
-This folder contains the analysis of Italy's ChatGPT ban impact on GitHub commit activity.
+The following directory contains various scripts which were used while working at this paper. The files are organized in the following directories:
 
-## Overview
+- `./analyses`: Contains the scripts with which the results of our analyses have been calculated, as well as downloaded.
+- `./data`: Contains GitHub users for the corresponding countries, which were imported to a custom BigQuery table. Source: https://github.com/sodalabsio/github_scrape, as described in https://arxiv.org/abs/2304.09339
+- `./exploration`: Contains scripts and plots which were used for exploration, but did not end up being used for the final report.
+- `./large_data`: Contains large csv and sqlite3 files, which were loaded from BigQuery or the GitHub Rest API.
+- `./reproduction`: Contains scripts for the reproduction of the release event DiD analysis, as described in https://arxiv.org/abs/2304.09339. Exact reproduction was not possible, due to incomplete information in the original paper, but the general ideas were reproducable.
 
-This analysis examines whether Italy's temporary ban on ChatGPT (April 1-28, 2023) affected software development activity as measured by GitHub commits. We use a difference-in-differences approach comparing Italy (treatment) with Austria and France (control groups).
-
-## Sample Size
-
-- **Italy**: 1000 developers sampled (treatment group)
-- **Austria**: 1000 developers sampled (control group)
-- **France**: 1000 developers sampled (control group)
-- **Total**: 3000 developers sampled
-
-**Note**: Not all sampled users will have commits in the GitHub Archive during the analysis period. This is normal because:
-
-- GitHub Archive only captures public activity
-- Not all users are active during any given time period
-- Some users may have private repositories or different activity patterns
-
-The analysis focuses on the **active subset** of developers who had commits during the period, which is actually more meaningful for understanding development activity patterns.
-
-
-## Analysis
-
-Run the Jupyter notebook `chatgpt_ban_analysis.ipynb` to perform the complete analysis including:
-
-1. **Data Loading and Preprocessing**
-2. **Daily Commit Trends Visualization**
-3. **Statistical Analysis** (Before vs During vs After Ban)
-4. **Difference-in-Differences Estimation**
-5. **Statistical Significance Testing**
-6. **Conclusions and Interpretation**
-
-## Key Dates
-
-- **Analysis Period**: January 26 - May 26, 2023
-- **ChatGPT Ban**: April 1-28, 2023 (full period)
-- **Ban Duration Options**:
-  - **3-day ban**: April 1-3, 2023 (immediate impact)
-  - **7-day ban**: April 1-7, 2023 (before adaptation)
-  - **Full ban**: April 1-28, 2023 (includes adaptation period)
-- **Pre-ban Period**: January 26 - March 31, 2023
-- **Post-ban Period**: April 29 - May 26, 2023
-
-## Ban Duration Analysis
-
-The analysis accounts for the fact that people likely adapted to the ban after a few days (using VPNs, etc.). You can experiment with different ban durations:
-
-- **3-day ban**: Captures immediate impact before adaptation
-- **7-day ban**: Captures impact before widespread adaptation
-- **Full ban**: Includes the adaptation period (may dilute effects)
-
-## Expected Outputs
-
-The analysis will produce:
-
-- Daily commit trend visualizations
-- Difference-in-differences plots
-- Statistical significance tests
-- Effect size calculations
-- Comprehensive interpretation of results
-
-## Requirements
-
-- Python 3.8+
-- pandas, numpy, matplotlib, seaborn, scipy
-- Jupyter notebook
-- Data files from `data/` and `large_data`
