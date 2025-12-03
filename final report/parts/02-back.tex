@@ -19,6 +19,11 @@
 \appendix
 
 \section{Ban Lift Analysis}
+\label{appendix:banlift}
+
+To further examine the causal relationship and strengthen our interpretation, we analyze the period following the ban's lift on April 28, 2023. This analysis serves as a complementary test of our circumvention hypothesis: if Italian developers experienced a genuine productivity decline during the ban (due to inability to access ChatGPT), we would expect to observe a positive rebound effect when access was officially restored. Conversely, if developers successfully circumvented the ban and maintained access throughout the restriction period, the official lifting should have no effect—they would already be using ChatGPT regardless of its legal status. This logic provides a powerful test of whether the ban was effectively enforced or circumvented.
+
+Table~\ref{tab:did-lift} presents difference-in-differences estimates comparing coding activity before and after the ban was lifted, using the same time windows as our main analysis. The coefficient on ``Italy × Post-Lift'' represents whether developers in Italy experienced a rebound in coding activity relative to the control countries once ChatGPT access was officially restored.
 
 \begin{table}[htbp]
   \centering
@@ -26,9 +31,12 @@
   \label{tab:did-lift}
   \input{parts/ban_lift_regression_table}
   \par\vspace{0.1cm}
-  \textit{Notes:} Absorbed fixed effects for users and dates. Robust standard errors are clustered on the user-level in parentheses.\\
-  *** p$<$0.01, ** p$<$0.05, * p$<$0.1
+  \textit{Notes:} Absorbed fixed effects for users and dates. Robust standard errors are clustered on the user-level in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1
 \end{table}
+
+We find no statistically significant effects in any of the specifications. For the two-week post-lift period, the treatment effects are -0.0321 (SE: 0.0494) for log additions and -0.0044 (SE: 0.0502) for log deletions. For the four-weekday period, the effects are -0.0158 (SE: 0.0541) and -0.0585 (SE: 0.0547), respectively. All coefficients are small in magnitude, not statistically significant, and show no consistent pattern of positive rebound. 
+
+The absence of any observable increase in coding activity following the ban's lift is consistent with our main interpretation: developers had already restored access through circumvention (primarily VPNs, as documented in Appendix~\ref{appendix:circumvention}) weeks before the official lifting. If they were already using ChatGPT throughout the ban period, the legal change on April 28 would have no marginal impact on their actual access or productivity—which is precisely what we observe. This null result, combined with the null finding during the ban period itself, provides mutually reinforcing evidence that the treatment was effectively porous due to widespread circumvention.
 
 \section{Ban Circumvention Analysis}
 \label{appendix:circumvention}

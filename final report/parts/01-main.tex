@@ -67,7 +67,7 @@ In contrast to the original study—which measured aggregate productivity throug
 
 \autoref{eq:did} represents the DiD specification used for our analyses. All variables will be standardized at the developer-day level to account for individual differences in coding activity. $Y_{it}$ denotes the outcome variable per user $i$ at time $t$. $\beta$ (Italy × Post) is the parameter of interest, describing the DiD estimate. $D_{it}$ equals to $1$ for events made by users in the treatment group (Italy) during the post ban period that was analyzed (two weeks or four weekdays). We include user and date fixed effects in our regression specifications to control for unobserved heterogeneity across developers and time-invariant day-specific factors that may confound the treatment effect. User fixed effects ($\alpha_{i}$) account for individual developer characteristics (e.g., skill level, coding style, project preferences) that remain constant over time, while date fixed effects ($\lambda_{t}$) capture common temporal shocks affecting all developers on a given day (e.g., holidays, major technology events, or platform-wide changes). We also include an interaction term between Italy and a linear time trend (Italy × Trend), represented as $\sigma_{d} \times t$ in the equation, to account for potential differential pre-treatment trends between Italy and the control countries, though its coefficient is not reported in the results table as it is not of primary interest. Standard errors $\varepsilon_{it}$ are clustered on the user-level.
 
-To explore whether the ban's effects varied across different types of developers, we conduct a heterogeneity analysis by stratifying developers into activity groups based on pre-ban commit volume tertiles. This analysis allows us to examine whether developers with different baseline activity levels responded differently to the ban, which could provide insights into how AI tool usage patterns vary across developer types.
+To explore whether the ban's effects varied across different types of developers, we conduct a heterogeneity analysis by stratifying developers into activity groups based on pre-ban commit volume tertiles. We focus on activity level for several theoretically motivated reasons. First, prior research suggests that AI tool adoption and benefits vary by developer experience and engagement \cite{cui2025the}, with less experienced developers showing greater productivity gains from AI assistance while experienced developers may face verification overhead. Activity level serves as a proxy for both developer engagement and potentially for reliance on AI tools—more active developers may have integrated AI tools more deeply into their workflows, making them more vulnerable to disruption. This analysis allows us to test whether the ban's impact varied systematically by baseline coding activity, which could reveal differential circumvention patterns or varied dependence on AI assistance across developer types.
 
 \section{Results}
 
@@ -103,18 +103,7 @@ The results show no statistically significant heterogeneity in the ban's impact 
 
 \subsubsection{Ban Lift Analysis}
 
-To further examine the causal relationship, we analyze the period following the ban's lift on April 28, 2023. Table~\ref{tab:did-lift} presents difference-in-differences estimates comparing coding activity before and after the ban was lifted. The coefficient on ``Italy × Post-Lift'' represents whether developers in Italy experienced a rebound in coding activity relative to the control countries once ChatGPT access was restored.
-
-% \begin{table}[htbp]
-%   \centering
-%   \caption{Difference-in-Differences Results: Post-Ban Lift (Absorbed Fixed Effects)}
-%   \label{tab:did-lift}
-%   \input{parts/ban_lift_regression_table}
-%   \par\vspace{0.1cm}
-%   \textit{Note:} *** p$<$0.01, ** p$<$0.05, * p$<$0.1
-% \end{table}
-
-We find no statistically significant effects in any of the specifications. The coefficients on ``Italy × Post-Lift'' are small in magnitude and not statistically significant for both LOC added and deleted, across both the two-week and four-weekday time windows. 
+To further examine the causal relationship, we analyze the period following the ban's lift on April 28, 2023 (see Appendix~\ref{appendix:banlift} for full details). This analysis tests whether developers experienced a rebound in coding activity once ChatGPT access was officially restored. We find no statistically significant effects on either lines of code added or deleted across both time windows. The absence of any rebound effect is consistent with our main interpretation: developers had already restored access through circumvention weeks before the official lifting, meaning the legal change had no marginal impact on their actual access or productivity. This null result, combined with the null finding during the ban period itself, provides mutually reinforcing evidence that the treatment was effectively porous due to widespread circumvention. 
 
 \subsection{Pull Requests Opened Analysis}
 
