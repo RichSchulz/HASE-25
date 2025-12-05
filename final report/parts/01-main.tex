@@ -1,12 +1,10 @@
 \section{Introduction}
 
-Substantial anecdotal evidence suggests that AI-assisted coding tools such as ChatGPT \cite{openai_chatgpt} have significantly increased developer productivity. However, recent empirical research has shown mixed results \cite{cui2025the, paradis2024doesaiimpactdevelopment, peng2023impactaideveloperproductivity, becker2025measuringimpactearly2025ai}. While some studies find notable efficiency gains from integrating generative AI into software development workflows—for instance, faster code completion and reduced debugging time—other work points to context-dependent or even negative effects. For example, Becker et al. \cite{becker2025measuringimpactearly2025ai} found that experienced developers using AI coding tools took 19\% longer to complete tasks in familiar codebases compared to those not using AI tools. These mixed findings suggest that productivity improvements vary substantially by task complexity, developer experience, and integration depth.
+Substantial anecdotal evidence suggests that AI-assisted coding tools such as ChatGPT \cite{openai_chatgpt} have significantly increased developer productivity. However, recent empirical research has shown mixed results \cite{cui2025the, paradis2024doesaiimpactdevelopment, peng2023impactaideveloperproductivity, becker2025measuringimpactearly2025ai}.
 
 Despite this growing literature, much of the existing evidence is correlational or based on controlled experiments detached from real-world settings. We still know little about how sudden changes in access to such tools affect developers in practice. The short-lived ChatGPT ban in Italy in early 2023 \cite{garante_ban_2023} offers a rare quasi-experimental opportunity to observe developers' behavioral responses to an abrupt disruption in access to a key AI tool.
 
-By analyzing GitHub repositories, Kreitmeir and Raschky \cite{Kreitmeir2023} documented a 50\% decline in release events in Italian open source projects during the first days of the ban. However, the effects on the granular, day-to-day development process remain unquantified. It remains unclear whether developers wrote less code or it took them longer to complete individual features, i.e., less pull requests were created. These variables reflect developer activity, one of the key dimensions of the SPACE framework used to measure developer productivity \cite[pp.~49–50]{forsgren2021the}. The number of pull requests has also been employed in related research as a proxy for developer productivity, where significant increases have been observed following the introduction of AI-assisted coding tools \cite[p.~6, p.~12]{cui2025the}. Using these proxies, 
-
-Building on Kreitmeir and Raschky's insights, we investigate additional effects the ban has had on developers by focusing on code and feature-level metrics. While release events capture aggregate project milestones, they provide limited insight into the underlying development dynamics. A release might include multiple new features, and might therefore consist of the work accumulated over a longer period of time, making it more difficult to show immediate impacts. Code-level metrics—specifically lines of code added and deleted per developer per day—offer a direct, granular measure of coding activity that reveals whether the sudden loss of ChatGPT access led to immediate changes at the level of individual code production. Pull requests offer another perspective on developer productivity. As they usually encompass the code changes required to implement a new feature or resolve a bug, their frequency serves as a proxy for feature-level output.
+By analyzing GitHub repositories, Kreitmeir and Raschky \cite{Kreitmeir2023} documented a 50\% decline in release events in Italian open source projects during the first days of the ban. Building on these findings, we investigate the effect of the ChatGPT ban on other developer output, particularly on added and deleted lines of code and the number of pull requests created. These variables reflect developer activity, one of the key dimensions of the SPACE framework used to measure developer productivity \cite[pp.~49–50]{forsgren2021the}. Based on the findings of previous research, which shows using AI-assisted coding tools reduced task completion by over 55\% \cite[p.~5]{peng2023impactaideveloperproductivity}, we assume the daily volume of code contributed by developers is higher when they have access to such tools. Similarly, the number of pull requests has also been employed in related research as a proxy for developer productivity, where significant increases have been observed following the introduction of AI-assisted coding tools \cite[p.~6, p.~12]{cui2025the}. Therefore, by blocking access to such tools, we would expect a decrease in the corresponding variables as a reaction to the ChatGPT ban.
 
 To investigate how the ChatGPT ban affected developers' coding activity, we address the following research questions:
 
@@ -23,7 +21,7 @@ AI-assisted coding tools have introduced substantial changes to how developers c
 
 \subsection{AI-Assisted Coding Tools and Developer Productivity}
 
-A growing body of empirical research has investigated the impact of AI-assisted coding tools on developer productivity, with mixed results. Early studies on GitHub Copilot found significant productivity gains, with developers completing tasks faster when using AI code completion \cite{peng2023impactaideveloperproductivity}. More recent large-scale field experiments have confirmed productivity improvements in some contexts. Cui et al. \cite{cui2025the} conducted randomized controlled trials across three companies and found a 26\% increase in completed tasks among developers using AI tools, with less experienced developers showing greater gains. Paradis et al. \cite{paradis2024doesaiimpactdevelopment} found that productivity improvements in enterprise settings vary substantially by task complexity and developer experience.
+A growing body of empirical research has investigated the impact of AI-assisted coding tools on developer productivity, with mixed results. Early studies on GitHub Copilot found significant productivity gains, with developers completing tasks faster when using AI code completion \cite{peng2023impactaideveloperproductivity}. More recent large-scale field experiments have confirmed productivity improvements in some contexts. Cui et al. \cite{cui2025the} conducted randomized controlled trials across three companies and found a 26\% increase in pull requests created among developers using AI tools, with less experienced developers showing greater gains. Paradis et al. \cite{paradis2024doesaiimpactdevelopment} found that productivity improvements in enterprise settings vary substantially by task complexity and developer experience.
 
 However, not all studies show positive effects. Becker et al. \cite{becker2025measuringimpactearly2025ai} conducted a randomized controlled trial with experienced open-source developers and found that those using AI coding tools took 19\% longer to complete tasks in familiar codebases compared to developers not using AI tools. The authors attributed this slowdown to the time spent reviewing and correcting AI-generated code, suggesting that experienced developers may face verification overhead that outweighs the benefits of AI assistance in contexts where they already possess strong domain knowledge. This finding highlights that AI tools' impact on productivity is highly context-dependent and may not universally benefit all developer populations.
 
@@ -45,7 +43,7 @@ To examine the impact of Italy's temporary ChatGPT ban on developer productivity
 
 \subsection{Data}
 
-The empirical analysis uses historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the early April 2023 ban. We leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Since GH Archive data does not include developers' location information, we infer users' countries based on their public profiles, following the methods from prior research \cite{Kreitmeir2023}. By analyzing \verb|PushEvent|s emitted by Italian developers, we can identify the corresponding commits and complement them with data from the GitHub REST API \cite{github_api}, to retrieve the number of lines of code added and deleted.
+The empirical analysis uses historical GitHub activity data from users in Italy, Austria, and France for the weeks surrounding the early April 2023 ban. We leverage the GH Archive dataset, which provides a comprehensive record of public GitHub events \cite{github_archive}. Since GH Archive data does not include developers' location information, we infer users' countries based on their public profiles, following the methods from prior research \cite{Kreitmeir2023}. We analyze \verb|PushEvent|s emitted by developers identified within our treatment and control groups. For each event, we retrieve the corresponding commit data through the GitHub REST API \cite{github_api}, extracting the number of lines added and deleted. We then compute the average daily change in code volume per developer. Additionally, we extract \verb|PullRequestEvent|s from GH Archive with the attribute \verb|action = 'opened'| to compute the average daily number of pull requests opened per developer in our sample.
 
 \subsection{Control Group Selection}
 
@@ -79,22 +77,22 @@ To explore whether the ban's effects varied across different types of developers
 
 \subsection{Code Volume Analysis}
 
-We begin by examining the impact of the ChatGPT ban on developers' coding activity, as measured by lines of code (LOC) added and deleted per developer per day. Table~\ref{tab:did-loc} presents the difference-in-differences regression results for both the two-week post-ban period (April 1--14, 2023) and the first four working days after the ban implementation (April 3--6, 2023).
+To address RQ1, we examine whether the ChatGPT ban affected developers’ coding activity, measured by lines of code (LOC) added and deleted per developer per day. Table~\ref{tab:did-loc} presents the difference-in-differences estimates for two post-ban periods: the two weeks following implementation (April 1--14, 2023) and the first four working days (April 3--6, 2023).
 
 \begin{table}[htbp]
   \centering
-  \caption{Difference-in-Differences Results: LOC Added / Deleted (Absorbed Fixed Effects)}
+  \caption{Difference-in-Differences Results: LOC Added / Deleted}
   \label{tab:did-loc}
   \input{parts/did_regression_table}
   \par\vspace{0.1cm}
   \textit{Notes:} Absorbed fixed effects for users and dates. Robust standard errors are clustered on the user-level in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1
 \end{table}
 
-The coefficient on ``Italy × Post-Ban'' represents the treatment effect of the ban on coding activity in Italy relative to the control countries (Austria and France). After controlling for user and date fixed effects, we find no statistically significant effects on either lines of code added or deleted in either time period. The coefficients are small in magnitude and not statistically significant at conventional levels. For log additions, the treatment effects are 0.0177 (SE: 0.0486) over the two-week period and 0.0542 (SE: 0.0527) over the four-weekday period. For log deletions, the corresponding effects are 0.0136 (SE: 0.0489) and 0.0326 (SE: 0.0524), respectively.
+The treatment effect (``Italy × Post-Ban'') is small and statistically insignificant in all specifications. For log additions, coefficients are 0.0177 (SE: 0.0486) for the two-week period and 0.0542 (SE: 0.0527) for the four-day period; for log deletions, 0.0136 (SE: 0.0489) and 0.0326 (SE: 0.0524), respectively. Overall, the ban did not measurably affect coding volume.
 
 \subsubsection{Heterogeneity Analysis}
 
-To explore whether the ban's effects varied across different types of developers, we conduct a heterogeneity analysis by developer activity level. We stratify developers into three groups (low, mid, and high activity) based on pre-ban commit volume tertiles. Table~\ref{tab:heterogeneity} presents the difference-in-differences estimates separately for each activity group.
+To examine heterogeneity, we stratify developers into low-, mid-, and high-activity groups based on pre-ban commit tertiles. Table~\ref{tab:heterogeneity} presents separate estimates for each group.
 
 \begin{table}[htbp]
   \centering
@@ -105,26 +103,28 @@ To explore whether the ban's effects varied across different types of developers
   \textit{Notes:} Activity groups defined by pre-ban commit volume tertiles. Absorbed fixed effects for users and dates. Robust standard errors are clustered on the user-level in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1
 \end{table}
 
-The results show no statistically significant heterogeneity in the ban's impact across developer activity levels. For log additions, the treatment effects are 0.0238 (SE: 0.2172) for low-activity developers, 0.0741 (SE: 0.1085) for mid-activity developers, and 0.0016 (SE: 0.0560) for high-activity developers. For log deletions, the corresponding effects are -0.0908 (SE: 0.2145), -0.0196 (SE: 0.1068), and 0.0192 (SE: 0.0565) for low, mid, and high-activity developers, respectively. None of these coefficients are statistically significant at conventional levels.
+Estimated effects remain small and statistically insignificant across all activity levels, indicating no evidence of heterogeneous responses to the ban.
 
 \subsubsection{Ban Lift Analysis}
 
-To further examine the causal relationship, we analyze the period following the ban's lift on April 28, 2023 (see Appendix~\ref{appendix:banlift} for full details). This analysis tests whether developers experienced a rebound in coding activity once ChatGPT access was officially restored. We find no statistically significant effects on either lines of code added or deleted across both time windows. The absence of any rebound effect is consistent with our main interpretation: developers had already restored access through circumvention weeks before the official lifting, meaning the legal change had no marginal impact on their actual access or productivity. This null result, combined with the null finding during the ban period itself, provides mutually reinforcing evidence that the treatment was effectively porous due to widespread circumvention. 
+We next examine the period after the ban was lifted on April 28, 2023 (see Appendix~\ref{appendix:banlift}). This tests whether coding activity rebounded once formal access to ChatGPT was restored.
+
+Across both the two-week and four-day post-lift windows, estimated treatment effects for LOC added and deleted remain small and statistically insignificant. The absence of any rebound implies that developers had already regained access—likely through circumvention methods—before the official lift. Combined with the null results during the ban, this suggests that the policy's practical impact on coding productivity was minimal.
 
 \subsection{Pull Requests Opened Analysis}
 
-To address RQ2, we examine the impact of the ChatGPT ban on the number of pull requests opened by developers in Italy. Table~\ref{tab:did-prs-opened} presents the difference-in-differences regression results for pull requests opened per developer per day, using the same time windows as in the code volume analysis.
+To address RQ2, we assess whether the ban affected the number of pull requests opened per developer. Table~\ref{tab:did-prs-opened} reports the difference-in-differences estimates for the same time windows as in the code volume analysis.
 
 \begin{table}[htbp]
   \centering
-  \caption{Difference-in-Differences Results: Pull Requests Opened (Absorbed Fixed Effects)}
+  \caption{Difference-in-Differences Results: Pull Requests Opened}
   \label{tab:did-prs-opened}
   \input{parts/prs_opened_did_table}
   \par\vspace{0.1cm}
   \textit{Notes:} Absorbed fixed effects for users and dates. Robust standard errors are clustered on the user-level in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1
 \end{table}
 
-``Italy × Post-Ban'' captures the treatment effect of the ban on pull request activity in Italy relative to the control countries (Austria and France). The results show no statistically significant effects on pull requests opened in the two-week period. For the four-weekday period, we observe a treatment effect of 0.0326 (SE: 0.0524), which is statistically significant at the 10\% level (p$=$0.0897).
+Similar to the results from the code volume analysis, the results show no statistically significant effects on pull requests opened in the two-week period. For the four-weekday period, we observe a treatment effect of 0.0326 (SE: 0.0524), which is statistically significant at the 10\% level (p$=$0.0897).
 
 
 \section{Discussion}
