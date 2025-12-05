@@ -77,7 +77,7 @@ To explore whether the ban's effects varied across different types of developers
 
 \subsection{Code Volume Analysis}
 
-To address RQ1, we examine whether the ChatGPT ban affected developers’ coding activity, measured by lines of code (LOC) added and deleted per developer per day. Table~\ref{tab:did-loc} presents the difference-in-differences estimates for two post-ban periods: the two weeks following implementation (April 1--14, 2023) and the first four working days (April 3--6, 2023).
+To address RQ1, we examine whether the ChatGPT ban affected developers’ coding activity, measured by lines of code (LOC) added and deleted per developer per day. \autoref{tab:did-loc} presents the difference-in-differences estimates for two post-ban periods: the two weeks following implementation (April 1--14, 2023) and the first four working days (April 3--6, 2023).
 
 \begin{table}[htbp]
   \centering
@@ -92,7 +92,7 @@ The treatment effect (``Italy × Post-Ban'') is small and statistically insignif
 
 \subsubsection{Heterogeneity Analysis}
 
-To examine heterogeneity, we stratify developers into low-, mid-, and high-activity groups based on pre-ban commit tertiles. Table~\ref{tab:heterogeneity} presents separate estimates for each group.
+To examine heterogeneity, we stratify developers into low-, mid-, and high-activity groups based on pre-ban commit tertiles. \autoref{tab:heterogeneity} presents separate estimates for each group.
 
 \begin{table}[htbp]
   \centering
@@ -107,13 +107,13 @@ Estimated effects remain small and statistically insignificant across all activi
 
 \subsubsection{Ban Lift Analysis}
 
-We next examine the period after the ban was lifted on April 28, 2023 (see Appendix~\ref{appendix:banlift}). This tests whether coding activity rebounded once formal access to ChatGPT was restored.
+We next examine the period after the ban was lifted on April 28, 2023 (see \autoref{appendix:banlift}). This tests whether coding activity rebounded once formal access to ChatGPT was restored.
 
 Across both the two-week and four-day post-lift windows, estimated treatment effects for LOC added and deleted remain small and statistically insignificant. The absence of any rebound implies that developers had already regained access—likely through circumvention methods—before the official lift. Combined with the null results during the ban, this suggests that the policy's practical impact on coding productivity was minimal.
 
 \subsection{Pull Requests Opened Analysis}
 
-To address RQ2, we assess whether the ban affected the number of pull requests opened per developer. Table~\ref{tab:did-prs-opened} reports the difference-in-differences estimates for the same time windows as in the code volume analysis.
+To address RQ2, we assess whether the ban affected the number of pull requests opened per developer. \autoref{tab:did-prs-opened} reports the difference-in-differences estimates for the same time windows as in the code volume analysis.
 
 \begin{table}[htbp]
   \centering
@@ -131,7 +131,7 @@ Similar to the results from the code volume analysis, the results show no statis
 
 Our difference-in-differences analysis revealed no statistically significant effects on coding activity (RQ1) or pull request creation (RQ2) during the ChatGPT ban period. Given that several field experiments have documented significant productivity gains from AI adoption \cite{peng2023impactaideveloperproductivity,cui2025the}, one might expect to observe measurable reductions in coding volume or feature-level output when access to these tools is disrupted. However, we observe no such reductions following the ban. This null result should not be interpreted as evidence that generative AI lacks utility, but rather as evidence of the high \textit{resilience} and \textit{adaptability} of developer workflows when faced with external disruptions.
 
-The null findings for lines of code added and deleted are likely explained by widespread ban circumvention through VPN usage and other methods. As documented in Appendix~\ref{appendix:circumvention}, VPN searches in Italy increased by 28.6 points (on a 0--100 scale) more than in control countries following the ban implementation, an effect that is statistically significant at the 1\% level. This substantial and immediate spike—reaching peak popularity (index 100) on the very day the ban was implemented (see Figure \ref{fig:vpn-timeseries})—suggests that many developers quickly regained access to ChatGPT despite the ban, effectively nullifying the treatment. While Google Trends data aggregates interest across the general population, software developers possess the specific \textit{technological fluency} required to rapidly adopt circumvention tools. If developers circumvented the ban and continued using ChatGPT, we would expect to observe no reduction in coding activity—which is precisely what we find.
+The null findings for lines of code added and deleted are likely explained by widespread ban circumvention through VPN usage and other methods. As documented in \autoref{appendix:circumvention}, VPN searches in Italy increased by 28.6 points (on a 0--100 scale) more than in control countries following the ban implementation, an effect that is statistically significant at the 1\% level. This substantial and immediate spike—reaching peak popularity (index 100) on the very day the ban was implemented (see Figure \ref{fig:vpn-timeseries})—suggests that many developers quickly regained access to ChatGPT despite the ban, effectively nullifying the treatment. While Google Trends data aggregates interest across the general population, software developers possess the specific \textit{technological fluency} required to rapidly adopt circumvention tools. If developers circumvented the ban and continued using ChatGPT, we would expect to observe no reduction in coding activity—which is precisely what we find.
 
 Several pieces of evidence support this circumvention interpretation. First, the heterogeneity analysis found no evidence of differential effects across developer activity groups (low, mid, and high activity), suggesting that the ban did not have statistically detectable impacts on coding activity regardless of developers' baseline activity levels. This uniformity across developer types is consistent with widespread circumvention rather than genuine absence of treatment effects. Second, the ban lift analysis further corroborates this interpretation: \textbf{if there was no initial dip in coding activity due to circumvention, there can be no rebound when the ban is lifted}. By the time the ban was officially lifted on April 28, many developers had already circumvented the restriction weeks earlier, meaning the lift had no meaningful impact on their access. The null results in both the ban period and the ban lift period are therefore mutually reinforcing.
 
